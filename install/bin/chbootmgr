@@ -1,0 +1,305 @@
+#!/bin/bash
+
+#  Description:
+#
+# Simple tool to patch ubuntu/grub.cfg in EFI partition
+# to mitigate the hardcoded grub.cfg path in Ubuntu
+# Run the script with parameters to get help.
+#
+
+###############
+# global vars #
+###############
+SOURCE_CFG="/boot/efi/EFI/lliurex-23/grub.cfg"
+SOURCE_CFG=/tmp/grub.cfg
+FSTAB_FILE="/etc/fstab"
+BEGIN_SECTION="## BEGIN LLIUREX CHBOOT data ##"
+END_SECTION="## END LLIUREX CHBOOT data ##"
+CHBOOT_LABEL="chboot"
+CHBOOT_MOUNT="/chboot"
+CHBOOT_FS="ext4"
+EFI_LLIUREX="lliurex-23"
+EFI_UBUNTU="ubuntu"
+EFI_MOUNT="/boot/efi"
+EFI_BASE="EFI"
+EFI_PREFIX="chbt_"
+
+#############
+# functions #
+#############
+die(){
+        TYPE="ERROR"
+        if [ "$#" -gt 1 ] ; then
+                TYPE="$1"
+                shift
+        fi
+        printf "${TYPE}: " >&2
+        while [ "$1" ] ; do
+                echo "$1" >&2
+                shift
+        done
+        echo "" >&2
+
+        exit 1
+}
+
+usage(){
+	die "Usage:" "$(basename "$0") {grub-fix|grub-clean|status}"
+}
+
+file_test_patch(){
+	FILE="$1"
+	if grep -q  "^${BEGIN_SECTION}$" "$SOURCE_CFG" && grep -q "^${END_SECTION}$" "$FILE" ; then
+		return 0
+	fi
+	return 1
+}
+
+file_del_patch(){
+	FILE="$1"
+	sed -i -e "/^${BEGIN_SECTION}$/,/^${END_SECTION}$/d" "$FILE"
+}
+
+chboot_init(){
+	chboot_get_uuid >/dev/null 2>/dev/null || return 1
+	chboot_add_fstab || return 1
+	chboot_mount || return 1
+}
+
+chboot_clean(){
+	# do lazy umount 
+	umount -l $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
+	chboot_del_fstab
+	rmdir --ignore-fail-on-non-empty $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
+}
+
+chboot_get_uuid(){
+	# chboot partition MUST HAVE chboot label
+	CHBOOT_UUID="$(lsblk -plo LABEL,NAME,UUID |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
+	[ "$CHBOOT_UUID" ] || return 1
+	#die "CHBOOT partition not found, aborting ..."
+	echo "$CHBOOT_UUID"
+	return 0
+}
+
+chboot_get_part(){
+	# chboot partition MUST HAVE chboot label
+	CHBOOT_PART="$(lsblk -plo LABEL,NAME |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
+	[ "$CHBOOT_PART" ] || return 1
+	echo "$CHBOOT_PART"
+	return 0
+}
+
+chboot_del_fstab(){
+	file_del_patch "$FSTAB_FILE"
+}
+
+chboot_test_fstab(){
+	if file_test_patch "$FSTAB_FILE" ; then
+		return 0
+	fi
+	return 1
+}
+
+chboot_test_mount(){
+	if df --output=target,source $CHBOOT_MOUNT |grep -q "^$CHBOOT_MOUNT" ; then
+		return 0
+	fi
+	return 1
+}
+
+chboot_mount(){
+	if ! chboot_test_mount ; then
+		mkdir -p $CHBOOT_MOUNT
+		mount $CHBOOT_MOUNT 2>/dev/null || true
+	fi
+	if chboot_test_mount ; then
+		return 0
+	fi
+	return 1
+}
+
+chboot_add_fstab(){
+	chboot_del_fstab
+	chboot_do_backup
+	CHBOOT_UUID="$(chboot_get_uuid)"
+	[ "$CHBOOT_UUID" ] || return 1
+	cat <<EOF >> "$FSTAB_FILE"
+$BEGIN_SECTION
+# mount chboot partition
+UUID=$CHBOOT_UUID	$CHBOOT_MOUNT	$CHBOOT_FS	defaults,noatime	0	1
+$END_SECTION
+EOF
+}
+
+entry_add(){
+	entry_add_grub || return 1
+
+	return 0
+}
+
+get_diskname(){
+	echo "$1" |sed -e "s%[[:digit:]]*$%%"
+}
+
+get_partnum(){
+	echo "$1" |sed -e "s%^[^[:digit:]]*%%"
+}
+
+entry_add_chboot(){
+	ENTRY_NAME="${EFI_PREFIX}${1}"
+	chboot_mount || return 1
+	CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
+	mkdir -p "$CHBOOT_PATH/boot/grub"
+
+}
+
+
+entry_add_efi(){
+	ENTRY_NAME="${EFI_PREFIX}${1}"
+	CHBOOT_UUID="$(chboot_get_uuid)"
+	[ "$CHBOOT_UUID" ] || return 1
+	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
+	if [ ! -d "$ENTRY_PATH" ] ; then
+		# check for lliurex dir or use ubuntu as default
+		TEMPLATE_PATH=""
+		for d in  $EFI_LLIUREX $EFI_UBUNTU ; do
+			D="$EFI_MOUNT/$EFI_BASE/$d"
+			if [ -z "$TEMPLATE_PATH" ] && [ -d "$D" ]  ; then
+				TEMPLATE_PATH="$D"
+			fi
+		done
+		[ "$TEMPLATE_PATH" ] || return 1
+		cp -r "$TEMPLATE_PATH" "$ENTRY_PATH"
+	fi
+
+	# create grub prefix configuration in EFI partition
+	EFI_CFG="$ENTRY_PATH/grub.cfg"
+	cat << EOF > "$EFI_CFG"
+search.fs_uuid $CHBOOT_UUID  root hd0,gpt2
+set prefix=($root)'/$ENTRY_NAME/boot/grub'
+configfile $prefix/grub.cfg
+EOF
+	# create boot entry 
+	EFI_PART="$(efi_get_part)"
+	efibootmgr  --create --disk=$(get_diskname "$EFI_PART") --part=$(get_partnum "$EFI_PART") --label="$ENTRY_NAME" --loader='\EFI\$ENTRY_NAME\shimx64.efi'
+	return 0
+}
+
+entry_del_grub(){
+	ENTRY_NAME="${EFI_PREFIX}${1}"
+	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
+	if [ -d "$ENTRY_PATH" ] ; then
+		rm -rf "$ENTRY_PATH"
+	fi
+}
+
+efi_get_part(){
+	# try with df (if mounted)
+	read t s f < <(df --output=target,source,fstype |grep "^$EFI_MOUNT" |tr -s "[[:blank:]]")
+	if [ "$t" = "$EFI_MOUNT" ] || echo "$f" |grep -iq "fat" ; then
+		EFI_PART="$s"
+	else
+		# there is an alternative:  try to get first fat partition:
+
+		# read f s < <(lsblk -plo FSTYPE,NAME |grep -i "^v\{0,1\}fat" |tr -s "[[:blank:]]" |head -1)
+		# EFI_PART="$s"
+
+		# but, in Ubuntu EFI partitione MUST BE mounted ....
+		return 1
+	fi
+	echo "$EFI_PART"
+	return 0
+}
+
+efi_get_uuid(){
+	EFI_UUID=""
+	EFI_PART="$(efi_get_part)"
+	if [ "$EFI_PART" ] ; then
+		read s EFI_UUID < <(lsblk -plo NAME,UUID |grep "^$EFI_PART" |tr -s "[[:blank:]]")
+	fi
+	[ "$EFI_UUID" ] || return 1
+	echo "$EFI_UUID"
+	return 0
+}
+
+grub_clean(){
+	grub_del_patch
+}
+
+grub_do_backup() {
+	cp "$SOURCE_CFG" "${SOURCE_CFG}.backup"
+}
+
+grub_test_patch(){
+	if file_test_patch "$SOURCE_CFG" ; then
+		return 0
+	fi
+	return 1
+}
+
+grub_del_patch(){
+	file_del_patch "$SOURCE_CFG"
+}
+
+grub_add_patch(){
+	EFI_UUID="$(efi_get_uuid)"
+	[ "$EFI_UUID" ] || return 1
+	grub_del_patch
+	grub_do_backup
+	TMP_FILE="$(mktemp)"
+	cat <<EOF > "$TMP_FILE"
+$BEGIN_SECTION
+# get EFI partition
+search.fs_uuid $EFI_UUID rootEFI hd0,gpt1
+# use cmdpath environment variable to guess the required EFI grub configuration to run
+if [ -n "\$cmdpath" ] ; then
+	if [ "\$cmdpath" != "(\$rootEFI)/EFI/ubuntu" ] ; then
+		if [ -e "\$cmdpath/grub.cfg" ] ; then
+			# jump to UEFI expected grub.cfg
+        		configfile \$cmdpath/grub.cfg
+		fi
+	fi
+fi
+
+# continue with default ubuntu grub sequence
+$END_SECTION
+EOF
+	cat "$SOURCE_CFG" >> "$TMP_FILE"
+	cat "$TMP_FILE" > "$SOURCE_CFG"
+	rm -f "$TMP_FILE"
+}
+
+main(){
+	[ "$1" ] || usage
+	ACTION="$1"
+	case "$ACTION" in
+		grub-fix)
+			grub_add_patch || die "EFI partition is not mounted, aborting ..."
+			;;
+		grub-clean)
+			grub_del_patch
+			;;
+		status)
+			rc=0
+			grub_test_patch || rc=$?
+			if [ $rc -eq 0 ] ; then
+				echo "ON"
+			else
+				echo "OFF"
+			fi
+			exit $rc
+			;;
+		*)
+			usage
+			;;
+	esac
+}
+
+################
+# main program #
+################
+main "$@"
+exit 0
+
+
