@@ -1,0 +1,21 @@
+Source: lliurex-chboot
+Section: misc
+Priority: optional
+Maintainer: LliureX Team <lliurex@gva.es> 
+Standards-Version: 4.3.0
+Build-Depends: debhelper-compat (= 10), n4d-dev
+Homepage: https://github.com/lliurex/lliurex-chboot
+
+Package: lliurex-chboot
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, systemd, efibootmgr
+Description: boot alternative images from a special disk partition
+ ChBoot is not a boot manager but uses a dedicated disk partition
+ (labelled chboot) to provide an alternative to removable media, USB disks
+ or even network boot.
+ Boot entries are managed with efibootmgr and grub without the need of
+ accessing BIOS configuration or make permanent changes in boot order.
+ The intended use is to boot live systems from images like squashfs or iso files.
+ .
+ ChBoot can be used to boot disk backup/clone/restore utilities like Clonezilla,
+ automate system restore operations from disk image or run live systems or installers.
