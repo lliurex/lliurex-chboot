@@ -1,0 +1,9 @@
+#!/bin/sh
+[ "$CHBOOT_ISODIR ] || exit 1
+ISO_FILE="lliurex25.iso"
+if [ -r "$CHBOOT_ISODIR/$ISO_FILE" ] ; then 
+	exit 0
+fi
+echo "MISSING FILE: $CHBOOT_ISODIR/$ISO_FILE"
+exit 1
+

@@ -1,0 +1,17 @@
+#!/bin/sh
+[ "$CHBOOT_ISODIR ] || exit 1
+
+ISO_FILE="$CHBOOT_ISODIR/lliurex25.iso"
+ISO_URL="https://releaseslliurexnet.gva.es/isos/25/LliureX-home-desktop_25_latest.iso"
+
+if [ -r "$ISO_FILE" ] ; then 
+	exit 0
+fi
+curl "$ISO_URL" -o "$ISO_FILE"
+if [ -s "$ISO_FILE" ] ; then 
+	exit 0
+fi
+
+echo "ERROR DOWNLOADING: $ISO_URL"
+exit 1
+
