@@ -4,7 +4,6 @@ ConditionPathExists=|/dev/disk/by-label/chboot
 ConditionPathExists=|/dev/disk/by-partlabel/chboot
 
 [Mount]
-After=chboot.service
 What=/dev/disk/by-label/chboot
 Where=/chboot
 Type=auto
