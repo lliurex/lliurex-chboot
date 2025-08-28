@@ -1,17 +1,33 @@
 #!/bin/sh
 [ "$CHBOOT_ISODIR ] || exit 1
 
-ISO_FILE="$CHBOOT_ISODIR/lliurex25.iso"
+TARGET_FILE="$CHBOOT_MOUNT/$CHBOOT_ISODIR/lliurex25.iso"
+if [ -r "$TARGET_FILE" ] ; then 
+	exit 0
+fi
+ISO_FILE=""
 ISO_URL="https://releaseslliurexnet.gva.es/isos/25/LliureX-home-desktop_25_latest.iso"
 
-if [ -r "$ISO_FILE" ] ; then 
-	exit 0
-fi
-curl "$ISO_URL" -o "$ISO_FILE"
-if [ -s "$ISO_FILE" ] ; then 
-	exit 0
+if [ "$1" ] ; then
+	if echo "$1" |grep -q "^https\{0,1\}://" ; then
+		ISO_URL="$1"
+	elif [ -r "$1" ] && [ -s "$1" ] ; then
+		ISO_FILE="$1"
+	fi
 fi
 
-echo "ERROR DOWNLOADING: $ISO_URL"
+if [ "$ISO_FILE" ] ; then
+	cp "$ISO_FILE" "$TARGET_FILE"
+else
+	curl "$ISO_URL" -o "$TARGET_FILE"
+fi
+
+if [ -s "$TARGET_FILE" ] ; then 
+	exit 0
+elif [ "$ISO_FILE" ] ; then
+	echo "ERROR COPYING: $ISO_FILE"
+else
+	echo "ERROR DOWNLOADING: $ISO_URL"
+fi
 exit 1
 
