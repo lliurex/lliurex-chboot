@@ -23,20 +23,24 @@ CHBOOT_TAG="/etc/lliurex-auto-upgrade/tags/chboot"
 CHBOOT_UUID=""
 CHBOOT_PART=""
 
-CHBOOT_ENTRY_FILES="control"
-CHBOOT_ENTRY_SCRIPTS="prepare status mkgrub"
+CHBOOT_ENTRY_FILES="chboot.cfg"
+CHBOOT_ENTRY_DIRS="boot hooks"
+CHBOOT_ENTRY_HOOKS="prepare checkup install mk_grub"
+
+CHBOOT_DEFAULT_NAME="lliurex"
 
 EFI_LLIUREX="lliurex-25 lliurex-23"
 EFI_UBUNTU="ubuntu"
 EFI_MOUNT="/boot/efi"
 EFI_BASE="EFI"
 EFI_PREFIX="chboot_"
-CHBOOT_SOURCEDIR="/usr/share/lliurex-chboot/boot"
+CHBOOT_USRDIR="/usr/share/lliurex-chboot/srcs"
 CHBOOT_ISODIR="$CHBOOT_BASEDIR/isos"
 CHBOOT_IMGDIR="$CHBOOT_BASEDIR/imgs"
+CHBOOT_SRCDIR="$CHBOOT_BASEDIR/srcs"
 CHBOOT_BOOTDIR="$CHBOOT_BASEDIR/boot"
 
-CHBOOT_DIRS="$CHBOOT_ISODIR $CHBOOT_IMGDIR $CHBOOT_BOOTDIR"
+CHBOOT_DIRS="$CHBOOT_ISODIR $CHBOOT_IMGDIR $CHBOOT_BOOTDIR $CHBOOT_SRCDIR"
 
 #############
 # functions #
@@ -144,14 +148,25 @@ chboot_unconfigure(){
 	grub_del_patch
 }
 
+
+
+chboot_del_entry(){
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_ENTRY="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$1"
+	rm -fr "$CHBOOT_ENTRY"
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
 chboot_update_entries(){
-	for d in $(ls -1 $CHBOOT_SOURCEDIR) ; do
-		if entry_validate "$d" ; then
-			D="$CHBOOT_SOURCEDIR/$d"
-			cp -r "$D"  "$CHBOOT_MOUNT/$CHBOOT_BOOTDIR"
-			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$d/grub"
+	for d in $(ls -1 $CHBOOT_USRDIR) ; do
+		if entry_validate "$d" "$CHBOOT_USRDIR" ; then
+			D="$CHBOOT_USRDIR/$d"
+			chboot_del_entry "$d"
+			cp -r "$D"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$d/boot"
 			mkdir -p "$GRUB_DIR"
-			entry_run_script "$d" mkgrub > $GRUB_DIR/grub.cfg
+			entry_run_hook "$d" mk_grub > $GRUB_DIR/grub.cfg
 		fi
 	done
 }
@@ -185,6 +200,7 @@ chboot_update_vars(){
 
 chboot_get_uuid(){
 	# chboot partition MUST HAVE chboot label
+	# alternative: blkid -s LABEL
 	CHBOOT_UUID="$(lsblk -plo LABEL,NAME,UUID |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
 	[ "$CHBOOT_UUID" ] || return 1
 	#die "CHBOOT partition not found, aborting ..."
@@ -222,30 +238,24 @@ chboot_mount(){
 
 entry_show_field(){
 	ENTRY_NAME="$1"
+	FIELD_NAME="$2"
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
 	#CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
-	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
-	# TODO: read field ....
+	CFG_FILE="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/chboot.cfg"
+	sed -ne "/^$FIELD_NAME:/,\${s%^$FIELD_NAME:\s*% %;/^[^[:blank:]]/,\$d;p}" "$CFG_FILE"
 	
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
-entry_add(){
-	# TODO: write this ....
-	entry_add_grub || return 1
-
-	return 0
-}
-
-entry_run_script(){
+entry_run_hook(){
 	ENTRY_NAME="$1"
 	SCRIPT_NAME="$2"
-	SCRIPT="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME/scripts/$SCRIPT_NAME"
+	SCRIPT="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/hooks/$SCRIPT_NAME"
 	ALREADY_MOUNTED="$(chboot_mount)"
 	if [ -x "$SCRIPT" ] ; then
 		chboot_update_vars
-		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_SOURCEDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR
+		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR
 		rc=0
 		$SCRIPT || rc=$?
 		return $rc
@@ -265,81 +275,127 @@ get_partnum(){
 }
 
 entry_validate(){
-	ENTRY_DIR="$CHBOOT_SOURCEDIR/$1"
+	RAW_NAME="$1"
+	RAW_DIR="$CHBOOT_SRCDIR"
+	shift
+	[ -z "$1" ] || 	RAW_DIR="$1"
+	ENTRY_DIR="$RAW_DIR/$RAW_NAME"
 	for f in $CHBOOT_ENTRY_FILES ; do
 		[ -r "$ENTRY_DIR/$f" ] || return 1
 	done
-	for f in $CHBOOT_ENTRY_SCRIPTS ; do
-		[ -x "$ENTRY_DIR/scripts/$f" ] || return 1
+	for f in $CHBOOT_ENTRY_DIRS ; do
+		[ -d "$ENTRY_DIR/$f" ] || return 1
+	done
+	for f in $CHBOOT_ENTRY_HOOKS ; do
+		[ -x "$ENTRY_DIR/hooks/$f" ] || return 1
 	done
 	return 0
 }
 
-entry_add_chboot(){
+efi_entry_name(){
 #	ENTRY_NAME="${EFI_PREFIX}${1}"
-	ENTRY_NAME="$1"
-	ALREADY_MOUNTED="$(chboot_mount)"
-	chboot_test_mount || return 1
-	#CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
-	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
-	mkdir -p "$CHBOOT_PATH/grub"
-	# TODO: terminate ...
-
-	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	ENTRY_NAME="${EFI_PREFIX}${CHBOOT_DEFAULT_NAME}"
 }
 
-entry_get_bootnum(){
-	ENTRY_NAME="${EFI_PREFIX}${1}"
+uefi_get_bootnum(){
+	ENTRY_NAME="$(efi_entry_name "$1")"
 	efibootmgr |sed -ne "/${ENTRY_NAME}$/{s%^Boot%%;s%\*\{0,1\}\s\+.*$%%;p}"
 }
 
-entry_del_efi(){
-	BOOT_NUM="$(entry_get_bootnum "$1")"
+uefi_del_entry(){
+	BOOT_NUM="$(uefi_get_bootnum "$1")"
 	if echo "$BOOT_NUM" |grep -q "^[[:digit:]]\+$" ; then
 		efibootmgr -B -b $BOOT_NUM  >/dev/null 2>/dev/null
 	fi
 }
 
-entry_set_bootnext(){
-	BOOT_NUM="$(entry_get_bootnum "$1")"
+uefi_set_bootnext(){
+	BOOT_NUM="$(uefi_get_bootnum "$1")"
 	if echo "$BOOT_NUM" |grep -q "^[[:digit:]]\+$" ; then
 		efibootmgr -n $BOOT_NUM  >/dev/null 2>/dev/null
 	fi
 }
 
-entry_unset_bootnext(){
+uefi_unset_bootnext(){
 	if echo "$BOOT_NUM" |grep -q "^[[:digit:]]\+$" ; then
 		efibootmgr -N  >/dev/null 2>/dev/null
 	fi
 }
 
-entry_add_efi(){
-	ENTRY_NAME="${EFI_PREFIX}${1}"
-	CHBOOT_UUID="$(chboot_get_uuid)"
-	[ "$CHBOOT_UUID" ] || return 1
-	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
-	if [ ! -d "$ENTRY_PATH" ] ; then
-		# check for lliurex dir or use ubuntu as default
-		TEMPLATE_PATH=""
-		for d in  $EFI_LLIUREX $EFI_UBUNTU ; do
-			D="$EFI_MOUNT/$EFI_BASE/$d"
-			if [ -z "$TEMPLATE_PATH" ] && [ -d "$D" ]  ; then
-				TEMPLATE_PATH="$D"
-			fi
-		done
-		[ "$TEMPLATE_PATH" ] || return 1
-		cp -r "$TEMPLATE_PATH" "$ENTRY_PATH"
+entry_checkup(){
+	RAW_NAME="$1"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	rc=1
+	if entry_validate "$RAW_NAME" ; then
+		rc=0
+		entry_run_hook "$RAW_NAME" checkup "$CHBOOT_PATH" || rc=$?
 	fi
 
-	# create grub prefix configuration in EFI partition
-	EFI_CFG="$ENTRY_PATH/grub.cfg"
-	cat << EOF > "$EFI_CFG"
-search.fs_uuid $CHBOOT_UUID  root hd0,gpt2
-set prefix=($root)'/$ENTRY_NAME/boot/grub'
-configfile $prefix/grub.cfg
-EOF
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	return $rc
+}
+
+entry_prepare(){
+	RAW_NAME="$1"
+	shift
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	# check if entry is ready 
+	if ! entry_test_ready "$RAW_NAME" ; then
+		entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
+	fi
+
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+entry_deactivate(){
+	RAW_NAME="$1"
+	ENTRY_NAME="$(efi_entry_name "$RAW_NAME")"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	uefi_del entry "$RAW_NAME"
+	efi_del entry "$RAW_NAME"
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
+	rm -rf "$CHBOOT_PATH"
+
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+entry_activate(){
+	RAW_NAME="$1"
+	shift
+	ENTRY_NAME="$(efi_entry_name "$RAW_NAME")"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	entry_deactivate "$RAW_NAME"
+	rc=1
+	if entry_checkup "$RAW_NAME" ; then
+		CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
+		cp -r "$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot" "$CHBOOT_PATH"
+		entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_PATH/grub.cfg"
+		rc=0
+		entry_run_hook "$RAW_NAME" install "$CHBOOT_PATH" || rc=$?
+		if [ $rc -eq 0 ] ; then
+			rc=1
+			if efi_add_entry "$RAW_NAME" and uefi_add_entry "$RAW_NAME" ; then
+				rc=0
+			fi
+		fi
+		[ $rc -eq 0 ] entry_deactivate "$RAW_NAME"
+	fi
+
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	return $rc
+}
+
+
+uefi_add_entry(){
+	ENTRY_NAME="$(efi_entry_name "$1")"
 	# delete boot entry 
-	entry_del_efi "$1"
+	uefi_del_entry "$1"
 
 	# create boot entry 
 	EFI_PART="$(efi_get_part)"
@@ -347,8 +403,37 @@ EOF
 	return 0
 }
 
-entry_del_grub(){
-	ENTRY_NAME="${EFI_PREFIX}${1}"
+efi_add_entry(){
+	ENTRY_NAME="$(efi_entry_name "$1")"
+	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
+	CHBOOT_UUID="$(chboot_get_uuid)"
+	[ "$CHBOOT_UUID" ] || return 1
+
+	# search for (grub) template
+	# check for lliurex dir or use ubuntu as default
+	TEMPLATE_PATH=""
+	for d in  $EFI_LLIUREX $EFI_UBUNTU ; do
+		D="$EFI_MOUNT/$EFI_BASE/$d"
+		if [ -z "$TEMPLATE_PATH" ] && [ -d "$D" ]  ; then
+			TEMPLATE_PATH="$D"
+		fi
+	done
+	[ "$TEMPLATE_PATH" ] || return 1
+	efi_del_entry "$1"
+	cp -r "$TEMPLATE_PATH" "$ENTRY_PATH"
+
+	# create grub prefix configuration in EFI partition
+	EFI_CFG="$ENTRY_PATH/grub.cfg"
+	cat << EOF > "$EFI_CFG"
+search.fs_uuid $CHBOOT_UUID  root hd0,gpt2
+set prefix=($root)'/$CHBOOT_BOOTDIR/$ENTRY_NAME'
+configfile $prefix/grub.cfg
+EOF
+	return 0
+}
+
+efi_del_entry(){
+	ENTRY_NAME="$(efi_entry_name "$1")"
 	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
 	if [ -d "$ENTRY_PATH" ] ; then
 		rm -rf "$ENTRY_PATH"
