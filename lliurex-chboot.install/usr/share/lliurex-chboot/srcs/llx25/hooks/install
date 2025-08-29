@@ -1,0 +1,6 @@
+#!/bin/sh
+# chboot install script for llx25
+
+# nothing to do
+exit 0
+
