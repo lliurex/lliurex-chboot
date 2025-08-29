@@ -88,18 +88,22 @@ A chboot source configuration (aka chboot entry) is a directory under lliurex-ch
     └── srcs
         └── ENTRY_FOLDER
             ├── chboot.cfg
-            └── scripts
+            ├── boot
+            └── hooks
+                ├── checkup
+                ├── prepare
                 ├── install
-                ├── testsrc
-                └── gengrub
+                └── mk_grub
 ```
 The ***mandatory*** files and folders for each source configuration are:
 
-- ***chboot.cfg*** file: This includes description and other information about the entry. The structure and syntax of the file is similar to debian/control files.
-- ***scripts*** folder: This directory must include the following executables:
-  - ***testsrc***: LliureX chboot runs this script to ensure that the source configuration is ready to use and can be activated. It is only a test script to check the presence of required files and configurations without trying to fix anything. A non zero exit status indicates that the entry is not ready, and the standard output is displayed as an explanation of the problem.
-  - ***install***: The intended use of this script is to download/install/generate ***ALL*** the required files to get the chboot entry ready to boot. The script can use any kind of arbitrary arguments. The exit status is ignored, but the standard output is displayed to user.
-  - ***gengrub***: The standard output of this script is used to generate the grub.cfg file in the chboot partition. It works in a similar way to the scripts in /etc/grub.d/.
+- ***chboot.cfg*** (file): This includes description and other information about the entry. The structure and syntax of the file is similar to debian/control files.
+- ***boot*** (dir): This directory must include all the necessary files to boot the entry, like the /boot/grub folder of an standard linux system (eg. vmlinuz, initrd, squashfs files, configurations ...). When the chboot entry is going to be activated, this directory is copied to $CHBOOT_BOOTDIR. When booting, grub expects a 'grub.cfg' file in this folder.
+- ***hooks*** (dir): The hooks folder must include the following executables:
+  - ***checkup***: LliureX chboot runs this script to ensure that the source configuration is ready to use and can be activated. It is only a test script to check the presence of required files and configurations without trying to fix anything. The script receives the full path of his boot directory (eg. /chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot) as first argument. A non zero exit status indicates that the entry is not ready, and the standard output is displayed as an explanation of the problem.
+  - ***prepare***: The intended use of this script is to download/install/generate ***ALL*** the required files to get the chboot entry ready to boot. As in previous case, the first argument of the script is the full path of his boot directory, but can use any kind of arbitrary additional arguments. This script is executed ***ONLY*** in case of The exit status is ignored, but the standard output is displayed to user. Before executing this script, LliureX chboot first runs the checkup script as a verification, so that “prepare” is executed ONLY if “checkup” has finished unsuccessfully.
+  - ***install***: The execution of this script is the last step to activate an entry (after copying his boot directory and the invocation of mk_grub), so, it can be used to perform any final changes required. The script receives full path of boot directory as first argument (/$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME). A non zero exit status aborts the activation, and the standard output is displayed.
+  - ***mk_grub***: The standard output of this script is used to generate the grub.cfg file in the chboot partition. It works in a similar way to the scripts in /etc/grub.d/.
 
 ### parameters and environment variables for chboot script execution
 All hook scripts have access to the following environment variables:
@@ -112,7 +116,7 @@ All hook scripts have access to the following environment variables:
 - CHBOOT_ISODIR : iso files folder (defaults to '$CHBOOT_BASEDIR/isos')
 - CHBOOT_IMGDIR : directory to store clonezilla images (defaults to '$CHBOOT_BASEDIR/imgs')
 - CHBOOT_SRCDIR : chboot source configurations base directory (defaults to '$CHBOOT_BASEDIR/srcs')
-- CHBOOT_BOOTDIR: this directory hosts the grub boot directory for chboot sources, like boot/grub folder in a standard linux system (defaults to '$CHBOOT_BASEDIR/boot')
+- CHBOOT_BOOTDIR: this directory hosts the grub boot directory for chboot sources, like /boot folder in a standard linux system (defaults to '$CHBOOT_BASEDIR/boot')
 
 #### Chboot partition info
 - CHBOOT_UUID: UUID of chboot partition
