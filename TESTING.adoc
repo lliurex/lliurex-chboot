@@ -52,7 +52,7 @@ When a new boot entry is created, chboot generates:
 
 - A ***UEFI boot entry***.
 
->This entry is availabe for UEFI Boot Manager, but chboot ***does not include it in the boot order***.
+> This entry is availabe for UEFI Boot Manager, but chboot ***does not include it in the boot order***.
 
 - The associated ***directory folder in the EFI System Partition*** to launch grub
 
