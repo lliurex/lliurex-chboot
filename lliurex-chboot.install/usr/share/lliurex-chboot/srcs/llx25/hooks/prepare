@@ -1,5 +1,9 @@
 #!/bin/sh
-[ "$CHBOOT_ISODIR ] || exit 1
+# chboot prepare script for llx25
+
+[ "$CHBOOT_ISODIR" ] || exit 1
+MY_BOOT_FOLDER="$1"
+shift
 
 TARGET_FILE="$CHBOOT_MOUNT/$CHBOOT_ISODIR/lliurex25.iso"
 if [ -r "$TARGET_FILE" ] ; then 
