@@ -48,6 +48,8 @@ The included configurations, allow different boot modes:
 ## Boot procedure details
 To configure alternative boot options, LliureX chboot depends on ***UEFI Boot Manager and grub***.
 
+image::chboot-boot.svg[]
+
 When a new boot entry is created, chboot generates:
 
 - A ***UEFI boot entry***.
