@@ -404,6 +404,7 @@ uefi_add_entry(){
 }
 
 efi_add_entry(){
+	RAW_NAME="$1"
 	ENTRY_NAME="$(efi_entry_name "$1")"
 	ENTRY_PATH="$EFI_MOUNT/$EFI_BASE/$ENTRY_NAME"
 	CHBOOT_UUID="$(chboot_get_uuid)"
@@ -426,7 +427,8 @@ efi_add_entry(){
 	EFI_CFG="$ENTRY_PATH/grub.cfg"
 	cat << EOF > "$EFI_CFG"
 search.fs_uuid $CHBOOT_UUID  root hd0,gpt2
-set prefix=($root)'/$CHBOOT_BOOTDIR/$ENTRY_NAME'
+#set prefix=($root)'/$CHBOOT_BOOTDIR/$ENTRY_NAME'
+set prefix=($root)'/$CHBOOT_SRCDIR/$1/boot'
 configfile $prefix/grub.cfg
 EOF
 	return 0
