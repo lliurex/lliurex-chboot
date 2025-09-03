@@ -151,5 +151,17 @@ All hook scripts have access to the following environment variables:
 - `CHBOOT_UUID:` `UUID` of chboot partition
 - `CHBOOT_PART:` chboot disk partition device
 
+## chbootmgr
+This is the management tool for chboot. Syntax and available options are:
+
+```
+Usage: chbootmgr {configure|unconfigure|mount|umount|list}
+       chbootmgr show CHBOOT_ENTRY
+       chbootmgr prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]
+       chbootmgr boot-next CHBOOT_ENTRY
+       chbootmgr boot [+SECONDS] CHBOOT_ENTRY
+```
+
+
 ## Binary packages
 * **lliurex-chboot**
