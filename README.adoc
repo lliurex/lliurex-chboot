@@ -69,11 +69,11 @@ The UEFI boot entry loads `shimx64.efi` file to provide compatibility with Secur
 ## The chboot disk partition
 LliureX chboot requires a dedicated disk partition. Partition size should be set according to the disk images or iso files you wish to use. The default size when running lliureX installer in OEM mode is 12 GB, enough to accommodate an ISO image of Clonezilla and the LliureX installer at the same time.
 
-LliureX chboot requires the use of a specific disk label (`chboot`) to correctly identify the chboot partition. The hard disk partition mut be labelled using e2label, tune2fs or alternative disk utilities. To ensure the operation, the `chboot` label must be displayed correctly when using blkid or lsblk commands, and the disk partitin must be accesible under `/dev/disk/by-label/chboot` path.
+LliureX chboot requires the use of a specific disk label (`chboot`) to correctly identify the chboot partition. The hard disk partition mut be labelled using e2label, tune2fs or alternative disk utilities. To ensure the operation, the `chboot` label must be displayed correctly when using `blkid` or `lsblk` commands, and the disk partitin must be accesible under `/dev/disk/by-label/chboot` path.
 
-The default filesystem for chboot partition is ext4, but any other filesystem supported by grub could be used.
+The default filesystem for chboot partition is `ext4`, but any other filesystem supported by `grub` could be used.
 
-LliureX chboot provides the appropiate systemd mount configuration to access chboot partition under /chboot mount point, so it should not to be added to fstab file.
+LliureX chboot provides the appropiate `systemd mount` configuration to access chboot partition under `/chboot` mount point, so it should not to be added to `fstab` file.
 
 ## chboot directory structure
 LliureX chboot creates the following directory structure, where `/chboot` is the partition mount point:
@@ -91,13 +91,13 @@ LliureX chboot creates the following directory structure, where `/chboot` is the
 
 - `lliurex-chboot`: Base directory for all the LliureX chboot stuff.
   - `lliurex-chboot/imgs`: clonezilla images directory
-  - ***lliurex-chboot/isos***: directory for bootable iso files
-  - ***lliurex-chboot/srcs***: chboot bootable (source) configurations
+  - `lliurex-chboot/isos`: directory for bootable iso files
+  - `lliurex-chboot/srcs`: chboot bootable (source) configurations
 
 ## chboot entries (or source configurations)
-A chboot entry (aka source configuration) is a directory folder containing all the information necessary to configure an alternative boot option. The chbootmgr tool looks for entries under lliurex-chboot/srcs folder.
+A chboot entry (aka source configuration) is a directory folder containing all the information necessary to configure an alternative boot option. The `chbootmgr` tool looks for entries under lliurex-chboot/srcs folder.
 
-> NOTE: The chboot partition is not automatically mounted at startup, so to install chboot entries from a Debian package, it is not safe to try to drop the files directly into /chboot. The correct way is to put them in another path and use chbootmgr postinstall or the required maintainer scripts.
+> NOTE: The chboot partition is not automatically mounted at startup, so to install chboot entries from a Debian package, it is not safe to try to drop the files directly into `/chboot`. The correct way is to put them in another path and use `chbootmgr install` in `postinstall` or other maintainer scripts.
 
 This is an example of the chboot entries tree:
 ```
@@ -124,32 +124,32 @@ image::chboot-entry-life-cyle.svg[]
 
 ### Mandatory files and folders for each source configuration ###
 
-- ***chboot.cfg*** (file): This includes description and other information about the entry. The structure and syntax of the file is similar to debian/control files.
-- ***boot*** (dir): This directory must include all the necessary files to boot the entry, like the /boot/grub folder of an standard linux system (eg. vmlinuz, initrd, squashfs files, configurations ...). When the chboot entry is activated, chboot creates a grub configuration in the EFI partition that expects a 'grub.cfg' file in this folder.
-- ***hooks*** (dir): The hooks folder must include the following executables:
-  - ***install***: The script is a "oneshot" script, and is called only once, just to copy/install the entry to the chboot partition the first time. It receives the full path of boot directory as first argument (/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot). The exit status of the script is silenty ignored.
-  - ***uninstall***: Called before deletion of the chboot entry.
-  - ***check***: LliureX chboot runs this script to ensure that the source configuration is ready to use and can be started. It is only a test script to check the presence of required files and configurations without trying to fix anything. The script receives the full path of his boot directory (eg. /chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot) as first argument. A non zero exit status indicates that the entry is not ready, and the standard output is displayed as an explanation of the problem.
-  - ***prepare***: The intended use of this script is to download/install/generate ***ALL*** the required files to get the chboot entry ready to boot (except for the grub.cfg file, which is created later by running 'mk-grub') . As in previous case, the first argument of the script is the full path of his boot directory, but can use any kind of arbitrary additional arguments. The exit status and standard output of this script is displayed to user after execution, but the readiness status of the chboot entry is determined by the execution result of 'check' script.
-  - ***free_up***: This script is not automatically executed by chboot to manage entries, but can be invoked by user in order to reduce disk space usage (eg. to delete downloaded isos or image files). It could be considered as the opposit of the configure script.
-  - ***mk_grub***: The standard output of this script is used to generate the grub.cfg file in the chboot partition. It works in a similar way to the scripts in /etc/grub.d/.
+- `chboot.cfg` (file): This includes description and other information about the entry. The structure and syntax of the file is similar to `debian/control` files.
+- `boot` (dir): This directory must include all the necessary files to boot the entry, like the /boot/grub folder of an standard linux system (eg. vmlinuz, initrd, squashfs files, configurations ...). When the chboot entry is activated, chboot creates a grub configuration in the EFI partition that expects a `grub.cfg` file in this folder.
+- `hooks` (dir): The hooks folder must include the following executables:
+  - `install: The script is a "oneshot" script, and is called only once, just to copy/install the entry to the chboot partition the first time. It receives the full path of boot directory as first argument (`/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot`). The exit status of the script is silenty ignored.
+  - `uninstall`: Called before deletion of the chboot entry.
+  - `check`: LliureX chboot runs this script to ensure that the source configuration is ready to use and can be started. It is only a test script to check the presence of required files and configurations without trying to fix anything. The script receives the full path of his boot directory (`/chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot`) as first argument. A non zero exit status indicates that the entry is not ready, and the standard output is displayed as an explanation of the problem.
+  - `prepare`: The intended use of this script is to download/install/generate ***ALL*** the required files to get the chboot entry ready to boot (except for the grub.cfg file, which is created later by running `mk-grub`) . As in previous case, the first argument of the script is the full path of his boot directory, but can use any kind of arbitrary additional arguments. The exit status and standard output of this script is displayed to user after execution, but the readiness status of the chboot entry is determined by the execution result of `check` script.
+  - `free_up`: This script is not automatically executed by chboot to manage entries, but can be invoked by user in order to reduce disk space usage (eg. to delete downloaded isos or image files). It could be considered as the opposit of the configure script.
+  - `mk_grub`: The standard output of this script is used to generate the grub.cfg file in the chboot partition. It works in a similar way to the scripts in /etc/grub.d/.
 
 ### parameters and environment variables for chboot script execution
 All hook scripts have access to the following environment variables:
 
 #### System paths
-- CHBOOT_MOUNT: mount point for chboot partition (defaults to '/chboot'). The rest of environment variables are relatives to this mount point to reflect paths inside the chboot partition.
+- `CHBOOT_MOUNT`: mount point for chboot partition (defaults to `/chboot`). The rest of environment variables are relatives to this mount point to reflect paths inside the chboot partition.
 
 #### Chboot partition relative paths
-- CHBOOT_BASEDIR: base directory for all the chboot stuff (defaults to '/lliurex-chboot')
-- CHBOOT_ISODIR : iso files folder (defaults to '$CHBOOT_BASEDIR/isos')
-- CHBOOT_IMGDIR : directory to store clonezilla images (defaults to '$CHBOOT_BASEDIR/imgs')
-- CHBOOT_SRCDIR : chboot source configurations base directory (defaults to '$CHBOOT_BASEDIR/srcs')
-- CHBOOT_BOOTDIR: this directory hosts the grub boot directory for chboot sources, like /boot folder in a standard linux system (defaults to '$CHBOOT_BASEDIR/boot')
+- `CHBOOT_BASEDIR:` base directory for all the chboot stuff (defaults to `/lliurex-chboot`)
+- `CHBOOT_ISODIR :` iso files folder (defaults to `$CHBOOT_BASEDIR/isos`)
+- `CHBOOT_IMGDIR :` directory to store clonezilla images (defaults to `$CHBOOT_BASEDIR/imgs`)
+- `CHBOOT_SRCDIR :` chboot source configurations base directory (defaults to `$CHBOOT_BASEDIR/srcs`)
+- `CHBOOT_BOOTDIR:` this directory hosts the grub boot directory for chboot sources, like `/boot` folder in a standard linux system (defaults to `$CHBOOT_BASEDIR/boot`)
 
 #### Chboot partition info
-- CHBOOT_UUID: UUID of chboot partition
-- CHBOOT_PART: chboot disk partition device
+- `CHBOOT_UUID:` `UUID` of chboot partition
+- `CHBOOT_PART:` chboot disk partition device
 
 ## Binary packages
 * **lliurex-chboot**
