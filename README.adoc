@@ -30,7 +30,7 @@ LliureX chboot tries to mitigate network boot limitations, and provides an alter
 ## Overview
 Lliurex chboot responds to LliureX ch(ange) boot, and includes a set of tools to configure alternative boot modes for LliureX computers.
 
-The (simple) and main idea is to use a second partition of the hard disk (labelled 'chboot') to boot an alternative system. avoiding the need to configure computers to boot from network or removable media to perform operations such as:
+The (simple) and main idea is to use a second partition of the hard disk (labelled `chboot`) to boot an alternative system. avoiding the need to configure computers to boot from network or removable media to perform operations such as:
 
 * installation of a new OS version
 * reinstallation from a recovery disk image
@@ -58,25 +58,25 @@ When a new boot entry is created, chboot generates:
 
 - The associated ***directory folder in the EFI System Partition*** to launch grub
 
-> When creating this directory, chboot scans current EFI partition and search for 'EFI/lliurex-25/', 'EFI/lliurex-23/' or ' EFI/ubuntu/' folders (in that order) and uses the first match as a 'template' to copy files for the new entry. The grub.cfg file is rewritten to provide an appropiated grub prefix configuration for the new boot entry.
+> When creating this directory, chboot scans current EFI partition and search for `EFI/lliurex-25/`, `EFI/lliurex-23/` or `EFI/ubuntu/` folders (in that order) and uses the first match as a template to copy files for the new entry. The `grub.cfg` file is rewritten to provide an appropiated grub prefix configuration for the new boot entry.
 
 - A ***grub boot directory in the chboot partition*** with the required boot files and grub configuration
 
-LliureX chboot uses exactly the same name for the EFI folder and the UEFI boot entry. This names are prefixed with 'chboot_'. At this moment, chboot manages only one boot entry with a fixed name (***chboot_lliurex***) regardless of the specific image name to boot. This strategy prevents the proliferation of unnecessary entries in the UEFI Boot Manager.
+LliureX chboot uses exactly the same name for the EFI folder and the UEFI boot entry. This names are prefixed with `chboot_`. At this moment, chboot manages only one boot entry with a fixed name (`chboot_lliurex`) regardless of the specific image name to boot. This strategy prevents the proliferation of unnecessary entries in the UEFI Boot Manager.
 However, in the chboot partition, no prefix is used for the names of the directories of the different entries, and each one has its own “boot” directory within its subdirectory.
-The UEFI boot entry loads 'shimx64.efi' file to provide compatibility with Secure Boot configurations.
+The UEFI boot entry loads `shimx64.efi` file to provide compatibility with Secure Boot configurations.
 
 ## The chboot disk partition
 LliureX chboot requires a dedicated disk partition. Partition size should be set according to the disk images or iso files you wish to use. The default size when running lliureX installer in OEM mode is 12 GB, enough to accommodate an ISO image of Clonezilla and the LliureX installer at the same time.
 
-LliureX chboot requires the use of a specific disk label ('chboot') to correctly identify the chboot partition. The hard disk partition mut be labelled using e2label, tune2fs or alternative disk utilities. To ensure the operation, the “chboot” label must be displayed correctly when using blkid or lsblk commands, and the disk partitin must be accesible under '/dev/disk/by-label/chboot' path.
+LliureX chboot requires the use of a specific disk label (`chboot`) to correctly identify the chboot partition. The hard disk partition mut be labelled using e2label, tune2fs or alternative disk utilities. To ensure the operation, the `chboot` label must be displayed correctly when using blkid or lsblk commands, and the disk partitin must be accesible under `/dev/disk/by-label/chboot` path.
 
 The default filesystem for chboot partition is ext4, but any other filesystem supported by grub could be used.
 
 LliureX chboot provides the appropiate systemd mount configuration to access chboot partition under /chboot mount point, so it should not to be added to fstab file.
 
 ## chboot directory structure
-LliureX chboot creates the following directory structure, where ***/chboot*** is the partition mount point:
+LliureX chboot creates the following directory structure, where `/chboot` is the partition mount point:
 ```
 /chboot
 └── lliurex-chboot
@@ -89,8 +89,8 @@ LliureX chboot creates the following directory structure, where ***/chboot*** is
 ```
 
 
-- ***lliurex-chboot***: Base directory for all the LliureX chboot stuff.
-  - ***lliurex-chboot/imgs***: clonezilla images directory
+- `lliurex-chboot`: Base directory for all the LliureX chboot stuff.
+  - `lliurex-chboot/imgs`: clonezilla images directory
   - ***lliurex-chboot/isos***: directory for bootable iso files
   - ***lliurex-chboot/srcs***: chboot bootable (source) configurations
 
