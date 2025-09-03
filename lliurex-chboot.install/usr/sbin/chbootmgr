@@ -11,7 +11,6 @@
 # global vars #
 ###############
 SOURCE_CFG="/boot/efi/EFI/lliurex-23/grub.cfg"
-SOURCE_CFG=/tmp/grub.cfg
 FSTAB_FILE="/etc/fstab"
 BEGIN_SECTION="## BEGIN LLIUREX CHBOOT data ##"
 END_SECTION="## END LLIUREX CHBOOT data ##"
@@ -25,7 +24,7 @@ CHBOOT_PART=""
 
 CHBOOT_ENTRY_FILES="chboot.cfg"
 CHBOOT_ENTRY_DIRS="boot hooks"
-CHBOOT_ENTRY_HOOKS="prepare checkup install mk_grub"
+CHBOOT_ENTRY_HOOKS="install uninstall check prepare free_up mk_grub"
 
 CHBOOT_DEFAULT_NAME="lliurex"
 
@@ -38,14 +37,17 @@ CHBOOT_USRDIR="/usr/share/lliurex-chboot/srcs"
 CHBOOT_ISODIR="$CHBOOT_BASEDIR/isos"
 CHBOOT_IMGDIR="$CHBOOT_BASEDIR/imgs"
 CHBOOT_SRCDIR="$CHBOOT_BASEDIR/srcs"
-CHBOOT_BOOTDIR="$CHBOOT_BASEDIR/boot"
+CHBOOT_BOOTDIR=""
+CHBOOT_SRCNAME=""
+CHBOOT_EFINAME=""
+#CHBOOT_BOOTDIR="$CHBOOT_BASEDIR/boot"
 
 CHBOOT_DIRS="$CHBOOT_ISODIR $CHBOOT_IMGDIR $CHBOOT_BOOTDIR $CHBOOT_SRCDIR"
 
 #############
 # functions #
 #############
-die(){
+error_msg(){
         TYPE="ERROR"
         if [ "$#" -gt 1 ] ; then
                 TYPE="$1"
@@ -57,13 +59,17 @@ die(){
                 shift
         done
         echo "" >&2
+}
 
+die(){
+	error_msg "$@"
         exit 1
 }
 
 usage(){
 	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
-	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE_OPTIONAL_PARAMETERS ...]" \
+	    "       $(basename "$0") show CHBOOT_ENTRY" \
+	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]" \
 	    "       $(basename "$0") boot-next CHBOOT_ENTRY" \
 	    "       $(basename "$0") boot [+SECONDS] CHBOOT_ENTRY"
 }
@@ -71,6 +77,7 @@ usage(){
 main(){
 	[ "$1" ] || usage
 	ACTION="$1"
+	shift
 	case "$ACTION" in
 		configure)
 			if ! chboot_configure ; then
@@ -102,6 +109,76 @@ main(){
 				echo "OFF"
 			fi
 			exit $rc
+			;;
+		list)
+			ALREADY_MOUNTED="$(chboot_mount)"
+			for RAW_NAME in $(chboot_list) ; do
+				entry_show_status "$RAW_NAME" |tr "\n" ">" |sed -e "s%>% -> %%"
+			done
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		show)
+			RAW_NAME="$1"
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_show_status "$RAW_NAME"
+				entry_show_field "$RAW_NAME" "Name"
+				entry_show_field "$RAW_NAME" "Description"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		prepare)
+			RAW_NAME="$1"
+			shift
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_prepare "$RAW_NAME" "$@"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		boot-next)
+			RAW_NAME="$1"
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				if entry_check_status "$ENTRY_NAME" ; then
+					entry_activate "$RAW_NAME" || error_msg "Unable to activate entry $RAW_NAME"
+				else
+					error_msg "Entry '$RAW_NAME' is not ready to be activated"
+				fi
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		boot)
+			TIME_DELAY="now"
+			if [ $# -gt 1 ] ; then
+				if echo "$1" |grep -q "^\+[[:digit:]]\+$" ; then
+					TIME_DELAY="$1"
+				fi
+				shift
+			fi
+			RAW_NAME="$1"
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				if entry_check_status "$ENTRY_NAME" ; then
+					if entry_activate "$RAW_NAME" ; then
+						[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+						shutdown -r $TIME_DELAY
+					else
+						error_msg "Unable to activate entry $RAW_NAME"
+					fi
+				else
+					error_msg "Entry '$RAW_NAME' is not ready to be activated"
+				fi
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		*)
 			usage
@@ -158,6 +235,12 @@ chboot_del_entry(){
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
+chboot_list(){
+	for d in $(ls -1 $CHBOOT_MOUNT/$CHBOOT_USRDIR) ; do
+		eccho "$d"
+	done
+}
+
 chboot_update_entries(){
 	for d in $(ls -1 $CHBOOT_USRDIR) ; do
 		if entry_validate "$d" "$CHBOOT_USRDIR" ; then
@@ -194,8 +277,11 @@ chhboot_umount(){
 
 
 chboot_update_vars(){
+	CHBOOT_SRCNAME="$1"
+	CHBOOT_EFINAME="$(efi_entry_name "$1")"
         CHBOOT_UUID="$(chboot_get_uuid)"
 	CHBOOT_PART="$(chboot_get_part)"
+	CHBOOT_BOOTDIR="$CHBOOT_SRCDIR/$CHBOOT_SRCNAME/boot"
 }
 
 chboot_get_uuid(){
@@ -236,6 +322,16 @@ chboot_mount(){
 	return 1
 }
 
+entry_show_status(){
+	ENTRY_NAME="$1"
+	echo "Entry: $ENTRY_NAME"
+	ENTRY_STATUS="OK. Ready to use"
+	if entry_check_status "$ENTRY_NAME" >/dev/null 2>/dev/null ; then
+		ENTRY_STATUS="*NOT READY* (run 'chbootmgr prepare $ENTRY_NAME' to fix"
+	fi
+	echo "Status: $ENTRY_STATUS"
+}
+
 entry_show_field(){
 	ENTRY_NAME="$1"
 	FIELD_NAME="$2"
@@ -243,7 +339,10 @@ entry_show_field(){
 	chboot_test_mount || return 1
 	#CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
 	CFG_FILE="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/chboot.cfg"
-	sed -ne "/^$FIELD_NAME:/,\${s%^$FIELD_NAME:\s*% %;/^[^[:blank:]]/,\$d;p}" "$CFG_FILE"
+	echo "$FIELD_NAME:"
+	sed -ne "/^$FIELD_NAME:/,\${s%^$FIELD_NAME:\s*% %;/^[^[:blank:]]/,\$d;p}" "$CFG_FILE" |while read l; do
+		eval echo "\" $l\""
+	done
 	
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
@@ -254,8 +353,8 @@ entry_run_hook(){
 	SCRIPT="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/hooks/$SCRIPT_NAME"
 	ALREADY_MOUNTED="$(chboot_mount)"
 	if [ -x "$SCRIPT" ] ; then
-		chboot_update_vars
-		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR
+		chboot_update_vars "$ENTRY_NAME"
+		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR CHBOOT_SRCNAME CHBOOT_EFINAME
 		rc=0
 		$SCRIPT || rc=$?
 		return $rc
@@ -276,10 +375,12 @@ get_partnum(){
 
 entry_validate(){
 	RAW_NAME="$1"
-	RAW_DIR="$CHBOOT_SRCDIR"
+	[ "$RAW_NAME" ] || return 1
+	RAW_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
 	shift
 	[ -z "$1" ] || 	RAW_DIR="$1"
 	ENTRY_DIR="$RAW_DIR/$RAW_NAME"
+	[ -d "$ENTRY_DIR" ] || return 1
 	for f in $CHBOOT_ENTRY_FILES ; do
 		[ -r "$ENTRY_DIR/$f" ] || return 1
 	done
@@ -322,7 +423,7 @@ uefi_unset_bootnext(){
 	fi
 }
 
-entry_checkup(){
+entry_check_status(){
 	RAW_NAME="$1"
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
@@ -330,7 +431,7 @@ entry_checkup(){
 	rc=1
 	if entry_validate "$RAW_NAME" ; then
 		rc=0
-		entry_run_hook "$RAW_NAME" checkup "$CHBOOT_PATH" || rc=$?
+		entry_run_hook "$RAW_NAME" check "$CHBOOT_PATH" || rc=$?
 	fi
 
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
@@ -343,11 +444,7 @@ entry_prepare(){
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
 	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
-	# check if entry is ready 
-	if ! entry_test_ready "$RAW_NAME" ; then
-		entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
-	fi
-
+	entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
@@ -358,34 +455,30 @@ entry_deactivate(){
 	chboot_test_mount || return 1
 	uefi_del entry "$RAW_NAME"
 	efi_del entry "$RAW_NAME"
-	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
-	rm -rf "$CHBOOT_PATH"
+	#CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME"
+	#rm -rf "$CHBOOT_PATH"
 
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
 entry_activate(){
 	RAW_NAME="$1"
-	shift
 	ENTRY_NAME="$(efi_entry_name "$RAW_NAME")"
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
 	entry_deactivate "$RAW_NAME"
-	rc=1
-	if entry_checkup "$RAW_NAME" ; then
-		CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_BOOTDIR/$ENTRY_NAME"
-		cp -r "$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot" "$CHBOOT_PATH"
-		entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_PATH/grub.cfg"
-		rc=0
-		entry_run_hook "$RAW_NAME" install "$CHBOOT_PATH" || rc=$?
-		if [ $rc -eq 0 ] ; then
-			rc=1
-			if efi_add_entry "$RAW_NAME" and uefi_add_entry "$RAW_NAME" ; then
-				rc=0
-			fi
+	# assume check_status OK
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot"
+	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_PATH/grub.cfg"
+	rc=0
+	entry_run_hook "$RAW_NAME" install "$CHBOOT_PATH" || rc=$?
+	if [ $rc -eq 0 ] ; then
+		rc=1
+		if efi_add_entry "$RAW_NAME" and uefi_add_entry "$RAW_NAME" ; then
+			rc=0
 		fi
-		[ $rc -eq 0 ] entry_deactivate "$RAW_NAME"
 	fi
+	[ $rc -eq 0 ] entry_deactivate "$RAW_NAME"
 
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 	return $rc
