@@ -122,7 +122,7 @@ Chboot entries are manged by chbootmgr tool. The following figure summarises the
 
 image::chboot-entry-life-cyle.svg[]
 
-###Mandatory files and folders for each source configuration
+###Mandatory files and folders for each source configuration###
 
 - ***chboot.cfg*** (file): This includes description and other information about the entry. The structure and syntax of the file is similar to debian/control files.
 - ***boot*** (dir): This directory must include all the necessary files to boot the entry, like the /boot/grub folder of an standard linux system (eg. vmlinuz, initrd, squashfs files, configurations ...). When the chboot entry is activated, chboot creates a grub configuration in the EFI partition that expects a 'grub.cfg' file in this folder.
