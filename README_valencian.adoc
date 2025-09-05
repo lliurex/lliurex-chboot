@@ -1,8 +1,17 @@
-== Lliurex chboot
-
-Luis Garcia :compat-mode: :toc: :icons: font :toc-title: Índex
-:toclevels: 3 :doctype: article :experimental: :icons: font
-:sectanchors: :sectlinks: :sectnums: :imagesdir: ./images
+# Lliurex chboot
+Luis Garcia
+:compat-mode:
+:toc:
+:icons: font
+:toc-title: Index
+:toclevels: 3
+:doctype: article
+:experimental:
+:icons: font
+:sectanchors:
+:sectlinks:
+:sectnums:
+:imagesdir: ./images
 
 === Context
 
