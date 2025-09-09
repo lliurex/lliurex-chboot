@@ -1,5 +1,6 @@
 # Lliurex chboot
 Luis Garcia
+Translated with https://linnk.ai/tools/markdown-translator/
 :compat-mode:
 :toc:
 :icons: font
@@ -13,143 +14,71 @@ Luis Garcia
 :sectnums:
 :imagesdir: ./images
 
-=== Context
+## Context
+Des de les primeres versions de LliureX, els models d'aula, centre i centre intel·ligent incloïen eines de gestió, actualització i configuració per als ordinadors del centre que han estat àmpliament utilitzades per tècnics de suport (SAI), coordinadors TIC i altre personal amb responsabilitats de gestió per als ordinadors dels centres.
+Aquestes utilitats també es podien utilitzar de manera centralitzada des dels servidors del centre. Aquestes aplicacions feien ús de funcions com ara la configuració i els serveis d'arrencada de xarxa (DHCP, DNS, PXE) que es gestionaven directament als servidors LliureX del centre.
 
-Des de les primeres versions de LliureX, the classroom, centre and smart
-centre models included management, update and configuration tools for
-the centre's computers that have been widely used by support technicians
-(SAI), ICT coordinators and other staff with management responsibilities
-for the centres' computers. These utilities could be used also centrally
-from the centre's servers. These applications made use of features such
-as configuration and network boot services (DHCP, DNS, PXE) that were
-managed directly on the centre's LliureX servers.
+Després del llançament de lliurex23, s'ha introduït una visió molt més corporativa de l'estació de treball dels centres educatius.
+Els principals objectius d'aquest nou model són augmentar la seguretat i facilitar una gestió centralitzada de la infraestructura informàtica.
+Per tal d'assolir aquests objectius, s'han produït transformacions importants en la infraestructura informàtica de tots els centres educatius de la Comunitat Valenciana. Aquests canvis afecten l'arquitectura i les característiques de les xarxes i les comunicacions, així com els detalls de configuració de l'equip informàtic.
 
-Després del llançament de lliurex23, a much more corporate vision of the
-educational centres' workstation has been introduced. Els principals
-objectius d'aquest nou model són to increase security and facilitate a
-centralised management of the IT infrastructure. In order to achieve
-these objectives, important transformations have taken place in the IT
-infrastructure of all the educational centres in the Valencian
-Community. These changes affect the architecture and characteristics of
-the networks and communications as well as the configuration details of
-the computer equipment.
+Els models de gestió de LliureX es van dissenyar en un context anterior que era molt diferent del paradigma actual de la infraestructura informàtica.
+En particular, les capacitats d'arrencada de xarxa (per tal d'aconseguir operacions de xarxa com la clonació d'ordinadors o la instal·lació) s'han reduït dràsticament i ja no són viables a la pràctica com a conseqüència de la gestió centralitzada de DHCP i DNS des de la DGTIC (cosa que fa impossible configurar paràmetres de xarxa ad hoc des dels ordinadors LLiureX).
+Per empitjorar les coses, la configuració de seguretat de l'ordinador (SecureBoot, contrasenya del BIOS...) dificulta no només l'arrencada des de la xarxa, sinó també des de qualsevol suport extraïble, cosa que fa que la reinstal·lació o l'actualització de l'equip sigui una missió realment impossible.
 
-Els models de gestió de LliureX van ser dissenyats in a previous context
-that was very different from the current IT infrastructure paradigm. In
-particular, the capabilities for network booting (in order to achieve
-network operations as cloning computer's or installation) have been
-drastically reduced and are no longer viable in practice as a
-consequence of the centraliced management of DHCP and DNS from the DGTIC
-(which makes it impossible to configure ad hoc network parameters from
-LLiureX computers). To make matters worse, the computer's security
-settings (SecureBoot, BIOS password ... ) difficult not only to boot
-from network but also from any removable media, making reinstalling or
-updating the equipment a real mission impossible.
+LliureX chboot intenta mitigar les limitacions d'arrencada de xarxa i proporciona un entorn alternatiu que es pot utilitzar per instal·lar, actualitzar o clonar ordinadors LliureX des d'imatges o suports d'instal·lació. Els casos d'ús van des de la instal·lació d'ordinadors individuals fins a l'execució de desplegaments massius amb eines com clonezilla o LliureX open-sysclone
 
-LliureX chboot intenta mitigar network boot limitations, and provides an
-alternative environment that can be used to install, upgrade or clone
-LliureX computers from images or installation media. Use cases range
-from installing individual computers to run massive deployments with
-tools as clonezilla or LliureX open-sysclone
+## Visió general
+Lliurex chboot respon a LliureX ch(ange) boot, i inclou un conjunt d'eines per configurar modes d'arrencada alternatius per als ordinadors LliureX.
 
-=== Overview
+La idea (simple) i principal és utilitzar una segona partició del disc dur (etiquetada `chboot`) per arrencar un sistema alternatiu, evitant la necessitat de configurar els ordinadors per arrencar des de la xarxa o suports extraïbles per realitzar operacions com ara:
 
-Lliurex chboot responds to LliureX ch(ange) boot, and includes a set of
-tools to configure alternative boot modes for LliureX computers.
+* instal·lació d'una nova versió del sistema operatiu
+* reinstal·lació des d'una imatge de disc de recuperació
 
-La idea principal (i senzilla) és to use a second partition of the hard
-disk (labelled `chboot`) to boot an alternative system. avoiding the
-need to configure computers to boot from network or removable media to
-perform operations such as:
+LliureX chboot es pot executar en un sol ordinador aïllat de la xarxa, però en combinació amb altres eines de LliureX, també es pot utilitzar en entorns de laboratoris informàtics per distribuir configuracions i imatges de disc per realitzar desplegaments massius (des d'una adreça IP coneguda per endavant).
 
-* installation of a new OS version
-* reinstallation from a recovery disk image
+Les configuracions incloses permeten diferents modes d'arrencada:
 
-LliureX chboot es pot executar in a single an network isolated computer,
-but in combination with other LliureX tools, can be also used in
-computer labs environments to distribute configurations and disk images
-to perform massive deployments (from a IP address known in advance).
+- instància de clonezilla autònoma (i desatesa) per restaurar la imatge del disc des de la partició chboot
+- instància de clonezilla autònoma (i desatesa) per restaurar des de la xarxa en un entorn de laboratori informàtic LliureX
+- servidor clonezilla automatitzat per a desplegaments massius
+- executar la imatge de clonezilla en mode interactiu
+- executar la imatge d'instal·lació interactiva de LliureX
 
-The included configurations, allow different boot modes:
-
-* self (and unattended) clonezilla instance to restore disk image from
-chboot partition
-* self (and unattended) clonezilla instance to restore from network in
-LliureX computer lab environment
-* automated clonezilla server for massive deployments
-* run clonezilla image in interactive mode
-* run interactive LliureX installation image
-
-=== Boot procedure details
-
-Per configurar opcions d'arrencada alternatives, LliureX chboot depends
-on *_UEFI Boot Manager and grub_*.
+## Detalls del procediment d'arrencada
+Per configurar opcions d'arrencada alternatives, LliureX chboot depèn de ***UEFI Boot Manager i grub***.
 
 image::chboot-boot.svg[]
 
-Quan es crea una nova entrada d'arrencada, chboot generates:
+Quan es crea una nova entrada d'arrencada, chboot genera:
 
-* A *_UEFI boot entry_*.
+- Una ***entrada d'arrencada UEFI***.
 
-____
-This entry is availabe for UEFI Boot Manager, but chboot *_does not
-include it in the boot order_* but sets the `UEFI BootNext` `NVRAM`
-variable, and (optionally) triggers a system reboot.
-____
+> Aquesta entrada està disponible per a UEFI Boot Manager, però chboot ***no l'inclou a l'ordre d'arrencada***, sinó que estableix la variable `NVRAM` `UEFI BootNext` i (opcionalment) activa un reinici del sistema.
 
-* The associated *_directory folder in the EFI System Partition_* to
-launch grub
+- La ***carpeta de directori associada a la partició del sistema EFI*** per llançar grub
 
-____
-When creating this directory, chboot scans current EFI partition and
-search for `EFI/lliurex-25/`, `EFI/lliurex-23/` or `EFI/ubuntu/` folders
-(in that order) and uses the first match as a template to copy files for
-the new entry. The `grub.cfg` file is rewritten to provide an
-appropiated grub prefix configuration for the new boot entry.
-____
+> Quan es crea aquest directori, chboot escaneja la partició EFI actual i cerca les carpetes `EFI/lliurex-25/`, `EFI/lliurex-23/` o `EFI/ubuntu/` (en aquest ordre) i utilitza la primera coincidència com a plantilla per copiar fitxers per a la nova entrada. El fitxer `grub.cfg` es reescriu per proporcionar una configuració de prefix grub adequada per a la nova entrada d'arrencada.
 
-* A *_grub boot directory in the chboot partition_* with the required
-boot files and grub configuration
+- Un ***directori d'arrencada grub a la partició chboot*** amb els fitxers d'arrencada i la configuració grub necessaris
 
-LliureX chboot utilitza exactament el mateix nom for the EFI folder and
-the UEFI boot entry. This names are prefixed with `chboot_`. At this
-moment, chboot manages only one boot entry with a fixed name
-(`chboot_lliurex`) regardless of the specific image name to boot. This
-strategy prevents the proliferation of unnecessary entries in the UEFI
-Boot Manager. However, in the chboot partition, no prefix is used for
-the names of the directories of the different entries, and each one has
-its own “boot” directory within its subdirectory. The UEFI boot entry
-loads `shimx64.efi` file to provide compatibility with Secure Boot
-configurations.
+LliureX chboot utilitza exactament el mateix nom per a la carpeta EFI i l'entrada d'arrencada UEFI. Aquests noms tenen el prefix `chboot_`. En aquest moment, chboot gestiona només una entrada d'arrencada amb un nom fix (`chboot_lliurex`) independentment del nom específic de la imatge per arrencar. Aquesta estratègia evita la proliferació d'entrades innecessàries a l'UEFI Boot Manager.
+Tanmateix, a la partició chboot, no s'utilitza cap prefix per als noms dels directoris de les diferents entrades, i cadascuna té el seu propi directori "boot" dins del seu subdirectori.
+L'entrada d'arrencada UEFI carrega el fitxer `shimx64.efi` per proporcionar compatibilitat amb les configuracions Secure Boot.
 
-=== The chboot disk partition
+## La partició de disc chboot
+LliureX chboot requereix una partició de disc dedicada. La mida de la partició s'ha d'establir d'acord amb les imatges de disc o els fitxers ISO que vulgueu utilitzar. La mida per defecte quan s'executa l'instal·lador de LliureX en mode OEM és de 12 GB, suficient per allotjar una imatge ISO de Clonezilla i l'instal·lador de LliureX al mateix temps.
 
-LliureX chboot requereix una partició de disc dedicada. Partition size
-should be set according to the disk images or iso files you wish to use.
-The default size when running lliureX installer in OEM mode is 12 GB,
-enough to accommodate an ISO image of Clonezilla and the LliureX
-installer at the same time.
+LliureX chboot requereix l'ús d'una etiqueta de disc específica (`chboot`) per identificar correctament la partició chboot. La partició del disc dur s'ha d'etiquetar mitjançant e2label, tune2fs o utilitats de disc alternatives. Per garantir el funcionament, l'etiqueta `chboot` s'ha de mostrar correctament quan s'utilitzen les ordres `blkid` o `lsblk`, i la partició del disc ha de ser accessible sota la ruta `/dev/disk/by-label/chboot`.
 
-LliureX chboot requires the use of a specific disk label (`chboot`) to
-correctly identify the chboot partition. The hard disk partition mut be
-labelled using e2label, tune2fs or alternative disk utilities. To ensure
-the operation, the `chboot` label must be displayed correctly when using
-`blkid` or `lsblk` commands, and the disk partitin must be accesible
-under `/dev/disk/by-label/chboot` path.
+El sistema de fitxers per defecte per a la partició chboot és `ext4`, però es podria utilitzar qualsevol altre sistema de fitxers compatible amb `grub`.
 
-El sistema de fitxers per defecte per a la partició chboot is `ext4`,
-but any other filesystem supported by `grub` could be used.
+LliureX chboot proporciona la configuració `systemd mount` adequada per accedir a la partició chboot sota el punt de muntatge `/chboot`, de manera que no s'ha d'afegir al fitxer `fstab`.
 
-LliureX chboot provides the appropiate `systemd mount` configuration to
-access chboot partition under `/chboot` mount point, so it should not to
-be added to `fstab` file.
-
-=== chboot directory structure
-
-LliureX chboot creates the following directory structure, where
-`/chboot` is the partition mount point:
-
-....
+## Estructura de directoris chboot
+LliureX chboot crea la següent estructura de directoris, on `/chboot` és el punt de muntatge de la partició:
+```
 /chboot
 └── lliurex-chboot
     ├── imgs
@@ -158,31 +87,20 @@ LliureX chboot creates the following directory structure, where
         ├── ENTRY_FOLDER_1
         ...
         └── ENTRY_FOLDER_n
-....
+```
 
-* `lliurex-chboot`: Base directory for all the LliureX chboot stuff.
-** `lliurex-chboot/imgs`: clonezilla images directory
-** `lliurex-chboot/isos`: directory for bootable iso files
-** `lliurex-chboot/srcs`: chboot bootable (source) configurations
+- `lliurex-chboot`: Directori base per a tot el material de LliureX chboot.
+  - `lliurex-chboot/imgs`: directori d'imatges de clonezilla
+  - `lliurex-chboot/isos`: directori per a fitxers ISO d'arrencada
+  - `lliurex-chboot/srcs`: configuracions d'arrencada (font) de chboot
 
-=== chboot entries (or source configurations)
+## Entrades chboot (o configuracions d'origen)
+Una entrada chboot (també coneguda com a configuració d'origen) és una carpeta de directori que conté tota la informació necessària per configurar una opció d'arrencada alternativa. L'eina `chbootmgr` busca entrades a la carpeta lliurex-chboot/srcs.
 
-Una entrada chboot (també coneguda com a configuració font) is a
-directory folder containing all the information necessary to configure
-an alternative boot option. The `chbootmgr` tool looks for entries under
-lliurex-chboot/srcs folder.
+> NOTA: La partició chboot no es munta automàticament a l'inici, de manera que per instal·lar entrades chboot des d'un paquet Debian, no és segur intentar deixar anar els fitxers directament a `/chboot`. La manera correcta és posar-los en un altre camí i utilitzar `chbootmgr install` a `postinstall` o altres scripts de manteniment.
 
-____
-NOTA: La partició chboot no es munta automàticament at startup, so to
-install chboot entries from a Debian package, it is not safe to try to
-drop the files directly into `/chboot`. The correct way is to put them
-in another path and use `chbootmgr install` in `postinstall` or other
-maintainer scripts.
-____
-
-Aquest és un exemple de l'estructura d'entrades chboot:
-
-....
+Aquest és un exemple de l'arbre d'entrades chboot:
+```
 /chboot
 └── lliurex-chboot
     └── srcs
@@ -198,99 +116,51 @@ Aquest és un exemple de l'estructura d'entrades chboot:
         │       └── mk_grub
         ├── ENTRY_FOLDER2
             .....
-....
+```
 
-Les entrades chboot són gestionades per l'eina chbootmgr. The following
-figure summarises the most important options.
+Les entrades Chboot són gestionades per l'eina chbootmgr. La figura següent resumeix les opcions més importants.
 
 image::chboot-entry-life-cyle.svg[]
 
-==== Mandatory files and folders for each source configuration
+### Fitxers i carpetes obligatoris per a cada configuració d'origen ###
 
-* `chboot.cfg` (file): This includes description and other information
-about the entry. The structure and syntax of the file is similar to
-`debian/control` files.
-* `boot` (dir): This directory must include all the necessary files to
-boot the entry, like the /boot/grub folder of an standard linux system
-(eg. vmlinuz, initrd, squashfs files, configurations ...). When the
-chboot entry is activated, chboot creates a grub configuration in the
-EFI partition that expects a `grub.cfg` file in this folder.
-* `hooks` (dir): The hooks folder must include the following
-executables:
-** `install`: The script is a "oneshot" script, and is called only once,
-just to copy/install the entry to the chboot partition the first time.
-It receives the full path of boot directory as first argument
-(`/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot`). The exit status of
-the script is silenty ignored.
-** `uninstall`: Called before deletion of the chboot entry.
-** `check`: LliureX chboot runs this script to ensure that the source
-configuration is ready to use and can be started. It is only a test
-script to check the presence of required files and configurations
-without trying to fix anything. The script receives the full path of his
-boot directory (`/chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot`) as
-first argument. A non zero exit status indicates that the entry is not
-ready, and the standard output is displayed as an explanation of the
-problem.
-** `prepare`: The intended use of this script is to
-download/install/generate *_ALL_* the required files to get the chboot
-entry ready to boot (except for the grub.cfg file, which is created
-later by running `mk-grub`) . As in previous case, the first argument of
-the script is the full path of his boot directory, but can use any kind
-of arbitrary additional arguments. The exit status and standard output
-of this script is displayed to user after execution, but the readiness
-status of the chboot entry is determined by the execution result of
-`check` script.
-** `free_up`: This script is not automatically executed by chboot to
-manage entries, but can be invoked by user in order to reduce disk space
-usage (eg. to delete downloaded isos or image files). It could be
-considered as the opposit of the configure script.
-** `mk_grub`: The standard output of this script is used to generate the
-grub.cfg file in the chboot partition. It works in a similar way to the
-scripts in /etc/grub.d/.
+- `chboot.cfg` (fitxer): Inclou la descripció i altra informació sobre l'entrada. L'estructura i la sintaxi del fitxer són similars als fitxers `debian/control`.
+- `boot` (dir): Aquest directori ha d'incloure tots els fitxers necessaris per arrencar l'entrada, com la carpeta /boot/grub d'un sistema linux estàndard (p. ex., fitxers vmlinuz, initrd, squashfs, configuracions...). Quan s'activa l'entrada chboot, chboot crea una configuració grub a la partició EFI que espera un fitxer `grub.cfg` en aquesta carpeta.
+- `hooks` (dir): La carpeta hooks ha d'incloure els següents executables:
+  - `install`: L'script és un script "oneshot" i es crida només una vegada, només per copiar/instal·lar l'entrada a la partició chboot la primera vegada. Rep la ruta completa del directori d'arrencada com a primer argument (`/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot`). L'estat de sortida de l'script s'ignora silenciosament.
+  - `uninstall`: Es crida abans de l'eliminació de l'entrada chboot.
+  - `check`: LliureX chboot executa aquest script per assegurar-se que la configuració d'origen està llesta per utilitzar-se i es pot iniciar. És només un script de prova per comprovar la presència dels fitxers i configuracions necessaris sense intentar solucionar res. L'script rep la ruta completa del seu directori d'arrencada (`/chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot`) com a primer argument. Un estat de sortida diferent de zero indica que l'entrada no està llesta i la sortida estàndard es mostra com a explicació del problema.
+  - `prepare`: L'ús previst d'aquest script és descarregar/instal·lar/generar ***TOTS*** els fitxers necessaris per preparar l'entrada chboot per arrencar (excepte el fitxer grub.cfg, que es crea més tard executant `mk-grub`). Com en el cas anterior, el primer argument de l'script és la ruta completa del seu directori d'arrencada, però pot utilitzar qualsevol tipus d'arguments addicionals arbitraris. L'estat de sortida i la sortida estàndard d'aquest script es mostren a l'usuari després de l'execució, però l'estat de preparació de l'entrada chboot està determinat pel resultat de l'execució de l'script `check`.
+  - `free_up`: Aquest script no s'executa automàticament per chboot per gestionar les entrades, però pot ser invocat per l'usuari per tal de reduir l'ús d'espai en disc (p. ex., per suprimir isos descarregats o fitxers d'imatge). Es podria considerar com l'oposat de l'script de configuració.
+  - `mk_grub`: La sortida estàndard d'aquest script s'utilitza per generar el fitxer grub.cfg a la partició chboot. Funciona de manera similar als scripts de /etc/grub.d/.
 
-==== parameters and environment variables for chboot script execution
+### paràmetres i variables d'entorn per a l'execució de l'script chboot
+Tots els scripts hook tenen accés a les següents variables d'entorn:
 
-Tots els scripts de connexió tenen accés a les següents variables
-d'entorn:
+#### Rutes del sistema
+- `CHBOOT_MOUNT`: punt de muntatge per a la partició chboot (per defecte `/chboot`). La resta de variables d'entorn són relatives a aquest punt de muntatge per reflectir les rutes dins de la partició chboot.
 
-===== System paths
+#### Rutes relatives de la partició Chboot
+- `CHBOOT_BASEDIR`: directori base per a tot el material chboot (per defecte `/lliurex-chboot`)
+- `CHBOOT_ISODIR` : carpeta de fitxers ISO (per defecte `$CHBOOT_BASEDIR/isos`)
+- `CHBOOT_IMGDIR` : directori per emmagatzemar imatges de clonezilla (per defecte `$CHBOOT_BASEDIR/imgs`)
+- `CHBOOT_SRCDIR` : directori base de configuracions d'origen chboot (per defecte `$CHBOOT_BASEDIR/srcs`)
+- `CHBOOT_BOOTDIR`: aquest directori allotja el directori d'arrencada grub per a les fonts chboot, com la carpeta `/boot` en un sistema linux estàndard (per defecte `$CHBOOT_BASEDIR/boot`)
 
-* `CHBOOT_MOUNT`: mount point for chboot partition (defaults to
-`/chboot`). The rest of environment variables are relatives to this
-mount point to reflect paths inside the chboot partition.
+#### Informació de la partició Chboot
+- `CHBOOT_UUID`: `UUID` de la partició chboot
+- `CHBOOT_PART`: dispositiu de partició de disc chboot
 
-===== Chboot partition relative paths
+## chbootmgr
+Aquesta és l'eina de gestió per a chboot. La sintaxi i les opcions disponibles són:
 
-* `CHBOOT_BASEDIR`: base directory for all the chboot stuff (defaults to
-`/lliurex-chboot`)
-* `CHBOOT_ISODIR` : iso files folder (defaults to
-`$CHBOOT_BASEDIR/isos`)
-* `CHBOOT_IMGDIR` : directory to store clonezilla images (defaults to
-`$CHBOOT_BASEDIR/imgs`)
-* `CHBOOT_SRCDIR` : chboot source configurations base directory
-(defaults to `$CHBOOT_BASEDIR/srcs`)
-* `CHBOOT_BOOTDIR`: this directory hosts the grub boot directory for
-chboot sources, like `/boot` folder in a standard linux system (defaults
-to `$CHBOOT_BASEDIR/boot`)
-
-===== Chboot partition info
-
-* `CHBOOT_UUID`: `UUID` of chboot partition
-* `CHBOOT_PART`: chboot disk partition device
-
-=== chbootmgr
-
-Aquesta és l'eina de gestió per a chboot. Syntax and available options
-are:
-
-....
+```
 Usage: chbootmgr {configure|unconfigure|mount|umount|list}
        chbootmgr show CHBOOT_ENTRY
        chbootmgr prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]
        chbootmgr boot-next CHBOOT_ENTRY
        chbootmgr boot [+SECONDS] CHBOOT_ENTRY
-....
+```
 
-=== Binary packages
-
-* *lliurex-chboot*
+## Paquets binaris
+* **lliurex-chboot**
