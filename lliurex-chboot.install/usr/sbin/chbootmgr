@@ -237,7 +237,7 @@ chboot_del_entry(){
 
 chboot_list(){
 	for d in $(ls -1 $CHBOOT_MOUNT/$CHBOOT_USRDIR) ; do
-		eccho "$d"
+		echo "$d"
 	done
 }
 
@@ -269,7 +269,7 @@ chboot_tag_unset(){
 	rm -f "$CHBOOT_TAG"
 }
 
-chhboot_umount(){
+chboot_umount(){
 	# do lazy umount 
 	# umount -l $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
 	systemctl stop chboot.mount
