@@ -315,11 +315,41 @@ chboot_mount(){
 		return 0
 	fi
 	[ "$1" = "-q" ] || echo "N"
+	chboot_create_mount
 	systemctl start chboot.mount
 	if chboot_test_mount ; then
 		return 0
 	fi
 	return 1
+}
+
+chboot_create_mount(){
+	if [ -f /etc/systemd/system/chboot.mount ]; then
+		return 0
+	fi
+
+	echo "Unit does not exists, creating..."
+
+	if ! chboot_test_partition ; then
+		die "chboot partition not found"
+	fi
+
+	CHBOOT_UUID="$(chboot_get_uuid)"
+
+	echo
+	echo "[Unit]
+Description=lliurex chboot mount unit
+
+[Mount]
+Where=/chboot
+What=/dev/disk/by-uuid/$CHBOOT_UUID
+Type=ext4
+Options=defaults,noatime
+" > /etc/systemd/system/chboot.mount
+
+	systemd daemon-reload 2> /dev/null
+
+	return 0
 }
 
 entry_show_status(){
