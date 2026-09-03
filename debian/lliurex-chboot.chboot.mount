@@ -1,14 +1,1 @@
-[Unit]
-Description=ChBoot Mount
-ConditionPathExists=|/dev/disk/by-label/chboot
-ConditionPathExists=|/dev/disk/by-partlabel/chboot
-
-[Mount]
-What=/dev/disk/by-label/chboot
-Where=/chboot
-Type=auto
-Options=rw,defaults,noauto
-
-[Install]
-WantedBy=local-fs.target
-
+services/lliurex-chboot.chboot.mount
