@@ -1,0 +1,11 @@
+#!/bin/sh
+cat << EOF
+search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID
+menuentry "LliureX 25 installer" --id lliurex25 {
+  isofile="$CHBOOT_ISODIR/lliurex25.iso"
+  loopback loop (\$chboot)\$isofile
+  linux (loop)/live/vmlinuz boot=live components quiet splash hostname=desktop-25 username=lliurex user-fullname=lliurex noautologin findiso=\$isofile custom options here
+  initrd (loop)/live/initrd.img
+}
+EOF
+

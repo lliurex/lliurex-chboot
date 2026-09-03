@@ -1,0 +1,14 @@
+#!/bin/sh
+# chboot checkup script for llx25
+
+MY_BOOT_FOLDER="$1"
+
+[ "$CHBOOT_ISODIR" ] || exit 1
+
+ISO_FILE="$CHBOOT_MOUNT/$CHBOOT_ISODIR/lliurex25.iso"
+if [ -r "$ISO_FILE" ] ; then 
+	exit 0
+fi
+echo "MISSING FILE: $ISO_FILE"
+exit 1
+
