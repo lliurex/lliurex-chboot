@@ -1,0 +1,8 @@
+#!/bin/sh
+DEST_DIR="$1"
+if [ -z "$DEST_DIR" ] || [ ! -d "$DEST_DIR" ] ; then
+	echo "Invalid destination directory" >&2
+	exit 1
+fi
+DEST_FILE="$DEST_DIR/lliurex-tags.tgz"
+tar -C /etc/lliurex-auto-upgrade/ -cvzf "DEST_FILE" tags/

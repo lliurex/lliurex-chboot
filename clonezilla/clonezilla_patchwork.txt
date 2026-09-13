@@ -1,0 +1,34 @@
+-k No create partition table
+-r resize partitions
+
+
+just a partition: https://unix.stackexchange.com/questions/169385/can-i-restore-a-single-partition-from-a-clonezilla-disk-image
+
+
+zstdcat sda2.ext4-ptcl-img.zst |partclone.restore -C -d -s - -o /dev/sda5 
+ojo -> está opción restaura el UID de la partición desde la imagen
+       según la IA, la opción --ignore_fschk ===> -I lo evita
+       si fuese así, se podría preservar el /etc/fstab entero, pero ... no serviría el grub.cfg
+
+
+
+
+https://askubuntu.com/questions/831216/how-can-i-reinstall-grub-to-the-efi-partition
+para reinstalr el grub he usado
+sudo mount /dev/sdXY /mnt
+sudo mount /dev/sdXX /mnt/boot/efi 
+
+for i in /dev /dev/pts /proc /sys /run /sys/firmware/efi/efivars ; do sudo mount -B $i /mnt$i; done  
+
+sudo chroot /mnt  
+
+grub-install /dev/sdX
+update-grub
+exit  
+
+
+ojo -> corregir boot/efi en fstab
+ojo -> el filesystem tiene que ampliarse porque se queda con el tamaño de la imagen (25GB)
+        resize2fs /dev/sda5
+
+cierto misterio con DISABLE_OS_PROBER
