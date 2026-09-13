@@ -1,0 +1,3 @@
+#!/bin/sh
+partclone.ext4 -c -s /dev/sda2 |xz -9e -c > sda2-image.xz
+#restore using xzcat sda2-image.xz | ...
