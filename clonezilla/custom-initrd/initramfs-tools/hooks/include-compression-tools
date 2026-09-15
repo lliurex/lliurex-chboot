@@ -1,0 +1,22 @@
+#!/bin/sh
+PREREQ=""
+prereqs() {
+    echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Copy compression tools to the initramfs
+
+for b in /usr/bin/xzcat /usr/bin/zstdcat ; do
+	copy_exec $b
+done
+
+
