@@ -5,7 +5,11 @@ EFI_PART=/dev/sda1
 mount $DEST_PART /mnt
 mount $EFI_PART /mnt/boot/efi 
 
-for i in /dev /dev/pts /proc /sys /run /sys/firmware/efi/efivars ; do sudo mount -B $i /mnt$i; done  
+# test if efivarfs is already mounted
+EFIVARS_DIR="/sys/firmware/efi/efivars"
+ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR
+
+for d in /dev /dev/pts /proc /sys /run $EFIVARS_DIR ; do mount --bind $d /mnt$d; done  
 
 # copy etc files
 SOURCE_DIR="./etc"
