@@ -1,4 +1,33 @@
 # chboot restore image script
+#
+# parse additional boot parameters outside functions
+# to create global vars
+
+export CHB_EFI=
+export CHB_DEV=
+export CHB_DIR=
+export CHB_FLAGS=
+export chbmnt=/chboot
+
+# Parse chboot specific command line options
+# outside functions to create global vars
+for x in $(cat /proc/cmdline); do
+        case $x in
+        chb.efi=*) 
+                CHB_EFI=${x#chb.efi=}
+                ;;
+        chb.dev=*) 
+                CHB_DEV=${x#chb.dev=}
+                ;;
+        chb.dir=*) 
+                CHB_DIR=${x#chb.dir=}
+                ;;
+        esac
+done
+
+for v in "$CHB_EFI" "$CHB_DEV" "$CHB_DIR" ; do
+	[ "${v}" ] || panic "Boot arguments must include chb.efi=, chb.dev= and chb.dir= parameters. Dropping to a shell!"
+done
 
 chboot_system_reboot(){
 #	TODO: find a better way to do this task ...
@@ -24,25 +53,19 @@ local_block()
 	[ "$quiet" != "y" ] && log_end_msg
 }
 
-local_premount()
+chboot_premount()
 {
-	if [ "${local_premount_used}" != "yes" ]; then
-		[ "${quiet?}" != "y" ] && log_begin_msg "Running /scripts/local-premount"
-		run_scripts /scripts/local-premount
+	if [ "${chboot_premount_used}" != "yes" ]; then
+		[ "${quiet?}" != "y" ] && log_begin_msg "Running /scripts/chboot-premount"
+		run_scripts /scripts/chboot-premount
 		[ "$quiet" != "y" ] && log_end_msg
 	fi
-	local_premount_used=yes
+	[ -d /chboot ] || mkdir -m 0700 /chboot
+	chboot_premount_used=yes
 }
 
-local_bottom()
-{
-	if [ "${local_premount_used}" = "yes" ] || [ "${local_top_used}" = "yes" ]; then
-		[ "${quiet?}" != "y" ] && log_begin_msg "Running /scripts/local-bottom"
-		run_scripts /scripts/local-bottom
-		[ "$quiet" != "y" ] && log_end_msg
-	fi
-	local_premount_used=no
-	local_top_used=no
+chboot_bottom(){
+	return
 }
 
 # $1=device ID to mount
@@ -193,86 +216,26 @@ local_device_setup()
 	DEV="${real_dev}"
 }
 
-local_mount_root()
-{
+chboot_mount(){
 	local_top
-	if [ -z "${ROOT}" ]; then
-		panic "No root device specified. Boot arguments must include a root= parameter."
-	fi
-	local_device_setup "${ROOT}" "root file system"
-	ROOT="${DEV}"
+	local_device_setup "${CHB_DEV}" "chboot file system"
+	CHB_DEV="${DEV}"
 
-	# Get the root filesystem type if not set
-	if [ -z "${ROOTFSTYPE}" ] || [ "${ROOTFSTYPE}" = auto ]; then
-		FSTYPE=$(get_fstype "${ROOT}")
-	else
-		FSTYPE=${ROOTFSTYPE}
-	fi
+	# Get the filesystem type
+	FSTYPE=$(get_fstype "${CHB_DEV}")
 
-	local_premount
+	chboot_premount
 
-	if [ "${readonly?}" = "y" ] && \
-	   [ -z "$LOOP" ]; then
-		roflag=-r
-	else
-		roflag=-w
-	fi
+	roflag=-r
+	#roflag=-w
+	
 
-	checkfs "${ROOT}" root "${FSTYPE}"
+	checkfs "${CHB_DEV}" chboot "${FSTYPE}"
 
-	# Mount root
-	# shellcheck disable=SC2086
-	mount ${roflag} ${FSTYPE:+-t "${FSTYPE}"} ${ROOTFLAGS} "${ROOT}" "${rootmnt?}"
-	mountroot_status="$?"
-	if [ "$LOOP" ]; then
-		if [ "$mountroot_status" != 0 ]; then
-			if [ "${FSTYPE}" = ntfs ] || [ "${FSTYPE}" = vfat ]
-			then
-				panic "
-Could not mount the partition ${ROOT}.
-This could also happen if the file system is not clean because of an operating
-system crash, an interrupted boot process, an improper shutdown, or unplugging
-of a removable device without first unmounting or ejecting it.  To fix this,
-simply reboot into Windows, let it fully start, log in, run 'chkdsk /r', then
-gracefully shut down and reboot back into Windows. After this you should be
-able to reboot again and resume the installation.
-(filesystem = ${FSTYPE}, error code = $mountroot_status)
-"
-			fi
-		fi
-
-		mkdir -p /host
-		mount -o move "$rootmnt" /host
-
-		while [ ! -e "/host/${LOOP#/}" ]; do
-			panic "ALERT!  /host/${LOOP#/} does not exist.  Dropping to a shell!"
-		done
-
-		# Get the loop filesystem type if not set
-		# shellcheck disable=SC2153
-		FSTYPE="$LOOPFSTYPE"
-		if [ -z "$FSTYPE" ] || [ "$FSTYPE" = "unknown" ]; then
-			FSTYPE=$(/sbin/blkid -s TYPE -o value "/host/${LOOP#/}")
-			[ -z "$FSTYPE" ] && FSTYPE="unknown"
-		fi
-
-		if [ "$readonly" = y ]; then
-			roflag=-r
-		else
-			roflag=-w
-		fi
-
-		# FIXME This has no error checking
-		modprobe loop
-
-		# FIXME This has no error checking
-		# shellcheck disable=SC2086
-		mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" "${rootmnt?}"
-
-		if [ -d "$rootmnt/host" ]; then
-			mount -o move /host "$rootmnt/host"
-		fi
-	fi
+	# Mount chboot
+	mount ${roflag} ${FSTYPE:+-t "${FSTYPE}"} ${CHB_FLAGS} "${CHB_DEV}" "${chbmnt?}"
+	mountchboot_status="$?"
+	panic "Dropping to a shell!"
 }
 
 local_mount_fs()
@@ -282,7 +245,7 @@ local_mount_fs()
 	local_device_setup "$MNT_FSNAME" "$1 file system"
 	MNT_FSNAME="${DEV}"
 
-	local_premount
+	chboot_premount
 
 	if [ "${readonly}" = "y" ]; then
 		roflag=-r
@@ -302,7 +265,7 @@ local_mount_fs()
 
 mountroot()
 {
-	local_mount_root
+	chboot_mount_root
 }
 
 mount_top()
@@ -314,11 +277,11 @@ mount_top()
 mount_premount()
 {
 	# Note, also called directly in case it's overridden.
-	local_premount
+	chboot_premount
 }
 
 mount_bottom()
 {
 	# Note, also called directly in case it's overridden.
-	local_bottom
+	chboot_bottom
 }
