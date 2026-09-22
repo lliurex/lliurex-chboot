@@ -2,8 +2,10 @@ Source: lliurex-chboot
 Section: misc
 Priority: optional
 Maintainer: LliureX Team <lliurex@gva.es> 
-Standards-Version: 4.3.0
-Build-Depends: debhelper-compat (= 13)
+Rules-Requires-Root: no
+Build-Depends: 
+ debhelper-compat (= 13),
+Standards-Version: 4.6.2
 Homepage: https://github.com/lliurex/lliurex-chboot
 
 Package: lliurex-chboot
