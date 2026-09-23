@@ -48,7 +48,7 @@ menuentry '${GRUB_DISTRIBUTOR}, with Linux ${KERNEL_VERSION}' --class lliurex --
         insmod ext2
         search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
         echo    'Loading Linux ${KERNEL_VERSION} for CHBOOT RESTORE ...'
-        linux   /boot/vmlinuz-${KERNEL_VERSION} root=${ROOT_UUID} ro boot=chboot chb.efi=${EFI_UUID} chb.dev=${CHBOOT_UUID} chb.dir=${CHBOOT_DIR} net.ifnames=0 rw $vt_handoff
+        linux   /boot/vmlinuz-${KERNEL_VERSION} root=UUID=${ROOT_UUID} ro boot=chboot chb.efi=UUID=${EFI_UUID} chb.dev=UUID=${CHBOOT_UUID} chb.dir=${CHBOOT_DIR} net.ifnames=0 rw $vt_handoff
         echo    'Loading initial ramdisk ...'
         initrd  /boot/${CHBOOT_INITRD}
 }
