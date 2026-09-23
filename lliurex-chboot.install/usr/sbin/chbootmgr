@@ -113,8 +113,9 @@ main(){
 		list)
 			ALREADY_MOUNTED="$(chboot_mount)"
 			for RAW_NAME in $(chboot_list) ; do
-				entry_show_status "$RAW_NAME" |tr "\n" ">" |sed -e "s%>% -> %%"
+				entry_show_status "$RAW_NAME" | tr "\n" ">" |sed -e "s%>% -> %g"
 			done
+			echo 
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		show)
@@ -222,7 +223,6 @@ chboot_unconfigure(){
 	chboot_test_partition || chboot_tag_unset
 	chboot_umount
 	rmdir --ignore-fail-on-non-empty $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
-	grub_del_patch
 }
 
 
@@ -236,7 +236,7 @@ chboot_del_entry(){
 }
 
 chboot_list(){
-	for d in $(ls -1 $CHBOOT_MOUNT/$CHBOOT_USRDIR) ; do
+	for d in $(ls -1 $CHBOOT_MOUNT/lliurex-chboot/srcs) ; do
 		echo "$d"
 	done
 }
@@ -352,11 +352,12 @@ entry_run_hook(){
 	SCRIPT_NAME="$2"
 	SCRIPT="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/hooks/$SCRIPT_NAME"
 	ALREADY_MOUNTED="$(chboot_mount)"
+	shift 2
 	if [ -x "$SCRIPT" ] ; then
 		chboot_update_vars "$ENTRY_NAME"
 		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR CHBOOT_SRCNAME CHBOOT_EFINAME
 		rc=0
-		$SCRIPT || rc=$?
+		$SCRIPT $@|| rc=$?
 		return $rc
 	else
 		rc=1
