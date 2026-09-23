@@ -216,7 +216,7 @@ local_device_setup()
 	DEV="${real_dev}"
 }
 
-chboot_mount(){
+chboot_mount_root(){
 	local_top
 	local_device_setup "${CHB_DEV}" "chboot file system"
 	CHB_DEV="${DEV}"
