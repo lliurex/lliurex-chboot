@@ -1,0 +1,56 @@
+#!/bin/sh
+
+GRUB_DISABLE_RECOVERY=true
+GRUB_DISABLE_SUBMENU=true
+GRUB_DISTRIBUTOR="LLiureX 23 CHBOOT RESTORE"
+#GRUB_CMDLINE_LINUX="boot=chboot chb.efi=UUID=1E52-9340 chb.dev=ed5f0a4e-51f9-4ae2-87d5-339d48c627e5 chb.dir=/initrd"
+
+. "$pkgdatadir/grub-mkconfig_lib"
+
+BOOT_DIR="/boot"
+CHBOOT_DIR="/initrd"
+CHBOOT_INITRD=""
+
+get_uuid(){
+	MOUNT_POINT="$1"
+	lsblk -nplo MOUNTPOINT,UUID |sed -ne "\%$MOUNT_POINT\s%{s%^.*\s%%;p}"
+}
+
+
+# find chboot initrd
+CHBOOT_INITRD="$(ls -1 "$BOOT_DIR" | grep "^initrd_chboot.img" |tail -1)"
+[ "$CHBOOT_INITRD" ] || exit 0
+
+KERNEL_VERSION="${CHBOOT_INITRD#*-}"
+
+# find chboot partition
+CHBOOT_BY_LABEL="/dev/disk/by-label/chboot"
+[ -e "$CHBOOT_BY_LABEL" ] || exit 0
+CHBOOT_PART="$(readlink -f "$CHBOOT_BY_LABEL")"
+CHBOOT_UUID="$(lsblk -nplo UUID "$CHBOOT_PART")"
+
+# find current root partition
+ROOT_UUID="$(get_uuid "/")"
+[ "$ROOT_UUID" ] || exit 0
+
+# find efi partition
+EFI_UUID="$(get_uuid "/boot/efi")"
+[ "$EFI_UUID" ] || exit 0
+
+cat <<EOF
+menuentry '${GRUB_DISTRIBUTOR}, with Linux ${KERNEL_VERSION}' --class lliurex --class gnu-linux --class gnu --class os \$menuentry_id_option 'gnulinux-${KERNEL_VERSION}-advanced-${ROOT_UUID}' {
+        recordfail
+        load_video
+        gfxmode \$linux_gfx_mode
+        insmod gzio
+        if [ x\$grub_platform = xxen ]; then insmod xzio; insmod lzopio; fi
+        insmod part_gpt
+        insmod ext2
+        search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
+        echo    'Loading Linux ${KERNEL_VERSION} for CHBOOT RESTORE ...'
+        linux   /boot/vmlinuz-${KERNEL_VERSION} root=${ROOT_UUID} ro boot=chboot chb.efi=${EFI_UUID} chb.dev=${CHBOOT_UUID} chb.dir=${CHBOOT_DIR} net.ifnames=0 rw $vt_handoff
+        echo    'Loading initial ramdisk ...'
+        initrd  /boot/${CHBOOT_INITRD}
+}
+EOF
+
