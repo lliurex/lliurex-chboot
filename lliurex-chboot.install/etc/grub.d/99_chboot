@@ -1,5 +1,6 @@
 #!/bin/sh
 
+CHBOOT_LABEL="chboot"
 
 chboot_get_uuid(){
 	# chboot partition MUST HAVE chboot label
@@ -11,6 +12,6 @@ chboot_get_uuid(){
 	return 0
 }
 
-
+CHBOOT_UUID=$(chboot_get_uuid)
 echo "search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID"
-echo "source $chboot/lliurex-chboot/grub/chboot.cfg"
+echo "source (\$chboot)/lliurex-chboot/grub/chboot.cfg"
