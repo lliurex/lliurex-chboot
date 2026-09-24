@@ -5,9 +5,14 @@
 
 export CHB_EFI=
 export CHB_DEV=
+export CHB_GRUB=
+export ROOT_DEV=
 export CHB_DIR=
 export CHB_FLAGS=
+export CHB_IMAGE="chboot-image"
+export CHB_IMG_TYPES="zst"
 export chbmnt=/chboot
+export efimnt=/efi
 
 # Parse chboot specific command line options
 # outside functions to create global vars
@@ -22,6 +27,9 @@ for x in $(cat /proc/cmdline); do
         chb.dir=*) 
                 CHB_DIR=${x#chb.dir=}
                 ;;
+        chb.grub=*) 
+                CHB_GRUB=${x#chb.grub=}
+                ;;
         esac
 done
 
@@ -29,7 +37,7 @@ for v in "$CHB_EFI" "$CHB_DEV" "$CHB_DIR" ; do
 	[ "${v}" ] || panic "Boot arguments must include chb.efi=, chb.dev= and chb.dir= parameters. Dropping to a shell!"
 done
 
-chboot_system_reboot(){
+chboot_reboot(){
 #	TODO: find a better way to do this task ...
 #	      kexec from kexec-tools ???
 
@@ -60,7 +68,9 @@ chboot_premount()
 		run_scripts /scripts/chboot-premount
 		[ "$quiet" != "y" ] && log_end_msg
 	fi
-	[ -d /chboot ] || mkdir -m 0700 /chboot
+	for d in $chbmnt $efimnt ; do
+		[ -d "$d" ] || mkdir -m 0700 "$d"
+	done
 	chboot_premount_used=yes
 }
 
@@ -216,26 +226,110 @@ local_device_setup()
 	DEV="${real_dev}"
 }
 
+chboot_get_image(){
+	if [ ! -r "$chbmnt/$CHB_DIR"
+	chb_image=""
+	for t in $CHB_IMG_TYPES ; do
+		chb_image="${chbmnt}/${CHB_DIR}/${CHB_IMAGE}.${t}"
+		if [ -r "$chb_image" ] ; then
+			echo $chb_image" 
+			return
+		fi
+	done
+	return 1
+}
+
+chboot_restore(){
+	rc=0
+	IMAGE_FILE="$1"
+	DEST_PART="$2"
+	# preserve root partition UUID
+	DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
+	CAT_CMD="zstdcat"
+	#TODO: Determine compression type and use apropiate tool
+
+	$CAT_CMD "$IMAGE_FILE" |partclone.restore -I -C -d -s - -o $DEST_PART || rc=?$
+
+	#clean and resize
+	[ $rc -ne 0 ] || e2fsck -f $DEST_PART || rc=$?
+	[ $rc -ne 0 ] || resize2fs $DEST_PART || rc=$?
+
+	#restore UUID
+	[ $rc -ne 0 ] || tune2fs -U "$DEST_UUID" "$DEST_PART" || rc=$?
+	return $rc
+}
+
 chboot_mount_root(){
 	local_top
+	chboot_premount
+
+	# get chboot device
 	local_device_setup "${CHB_DEV}" "chboot file system"
 	CHB_DEV="${DEV}"
 
 	# Get the filesystem type
-	FSTYPE=$(get_fstype "${CHB_DEV}")
+	CHB_FSTYPE=$(get_fstype "${CHB_DEV}")
 
-	chboot_premount
 
 	roflag=-r
 	#roflag=-w
 	
 
-	checkfs "${CHB_DEV}" chboot "${FSTYPE}"
+	checkfs "${CHB_DEV}" chboot "${CHB_FSTYPE}"
 
 	# Mount chboot
-	mount ${roflag} ${FSTYPE:+-t "${FSTYPE}"} ${CHB_FLAGS} "${CHB_DEV}" "${chbmnt?}"
+	mount ${roflag} -t "${CHB_FSTYPE}" ${CHB_FLAGS} "${CHB_DEV}" "${chbmnt?}"
 	mountchboot_status="$?"
-	panic "Dropping to a shell!"
+	[ $mountchboot_status -eq 0 ] || panic "Error mounting chboot partition!"
+	chb_image="$(chboot_get_image)"
+	[ "$chb_image" ] || panic "chboot image file not found"
+
+	# get ROOT device
+	if [ -z "${ROOT}" ]; then
+                panic "No root device specified. Boot arguments must include a root= parameter."
+        fi
+        local_device_setup "${ROOT}" "root file system"
+        ROOT="${DEV}"
+
+	chboot_restore "$chb_image" "$ROOT" || panic "Error restoring image file!!!"
+
+	# Get root filesystem type and mount root
+	ROOTFSTYPE="$(get_fstype "${ROOT}")"
+	roflag=-w
+	mount ${roflag} -t "${ROOTFSTYPE}"  ${ROOTFLAGS} "${ROOT}" "${rootmnt?}"
+        mountroot_status="$?"
+        [ $mountroot_status -eq 0 ] || panic "Error mounting root partition!"
+
+	# Mount efi partition
+        local_device_setup "${CHB_EFI}" "EFI partition"
+        CHB_EFI="${DEV}"
+	EFI_FSTYPE="$(get_fstype "${CHB_EFI}")"
+	roflag=-w
+	mount ${roflag} -t "${EFI_FSTYPE}" ${EFI_FLAGS} "$CHB_EFI}" "${efimnt?}"
+	mountefi_status="$?"
+	[ $mountefi_status -eq 0 ] || panic "Error mounting EFI partition!"
+	
+	# if not explicit CHB_GRUB parameter is included,
+	# install grub in the 'parent' device of the root partition
+	
+	if [ -z "$CHB_GRUB" ] ; then
+	        # get 'parent' from ROOT
+	        CHB_GRUB="$(lsblk -ndo pkname "$ROOT")"
+	fi
+
+	chboot_cp_root_files || panic "Error copying files to root filesystem"
+	chboot_install_grub "$CHB_GRUB" || panic "Error installing grub"
+	sync
+	REBOOT_DELAY=10
+	echo "All done!"
+	echo " Rebooting in $REBOOT_DELAY seconds"
+	while [ $REBOOT_DELAY -gt 0 ] ; do
+		echo " Rebooting in $REBOOT_DELAY seconds"
+		sleep 1
+		REBOOT_DELAY=$(( $REBOOT_DELAY -1))
+	done
+	chboot_reboot
+
 }
 
 local_mount_fs()
@@ -285,3 +379,39 @@ mount_bottom()
 	# Note, also called directly in case it's overridden.
 	chboot_bottom
 }
+
+chboot_cp_root_files(){
+	rc=0
+	EFIVARS_DIR="/sys/firmware/efi/efivars"
+	# test if efivarfs is already mounted
+	ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR || rc=1
+
+	if [ $rc -eq 0 ] ; do
+		# TODO: generalize this
+		# copy etc files
+		for d in etc ; do
+			SOURCE_DIR="$chbmnt/$CHB_DIR/$d"
+			DEST_DIR="${rootmnt}/$d"
+			ls -1 "$SOURCE_DIR" |while read f; do cp "$SOURCE_DIR/$f" "$DEST_DIR/$f" || rc=2 ; done
+		done
+	fi
+	return $rc
+}
+
+chboot_install_grub(){
+	DEST_DISK="$1"
+	rc=0
+	# do bind mounts
+	for d in /dev /dev/pts /proc /sys /run $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=1; done
+
+	# install and update grub in chroot
+	[ $rc -ne 0 ] || chroot "${rootmnt}" grub-install $DEST_DISK || rc=2
+	[ $rc -ne 0 ] || chroot "${rootmnt}" update-grub || rc=3
+
+	# umount bind  and root dir
+	if [ $rc -eq 0 ] ; then
+		for d in /sys/firmware/efi/efivars /run /sys /proc /dev/pts /dev /boot/efi  ; do umount ${rootmnt}${d}; done  
+		umount ${rootmnt}
+	fi
+}
+
