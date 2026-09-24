@@ -1,3 +1,16 @@
 #!/bin/sh
 
-echo "source /boot/grub/chboot.cfg"
+
+chboot_get_uuid(){
+	# chboot partition MUST HAVE chboot label
+	# alternative: blkid -s LABEL
+	CHBOOT_UUID="$(lsblk -plo LABEL,NAME,UUID |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
+	[ "$CHBOOT_UUID" ] || return 1
+	#die "CHBOOT partition not found, aborting ..."
+	echo "$CHBOOT_UUID"
+	return 0
+}
+
+
+echo "search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID"
+echo "source $chboot/lliurex-chboot/grub/chboot.cfg"
