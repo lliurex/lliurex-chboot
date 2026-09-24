@@ -14,4 +14,4 @@ chboot_get_uuid(){
 
 CHBOOT_UUID=$(chboot_get_uuid)
 echo "search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID"
-echo "source (\$chboot)/lliurex-chboot/grub/chboot.cfg"
+echo "source (\$chboot)/lliurex-chboot/boot/chboot.cfg"
