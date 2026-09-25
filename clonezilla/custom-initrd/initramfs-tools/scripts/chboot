@@ -272,11 +272,14 @@ chboot_mount_root(){
 	local_top
 	chboot_premount
 
+	[ "${quiet?}" != "y" ] && log_begin_msg "Starting chboot partition setup"
+
 	# get chboot device
 	local_device_setup "${CHB_DEV}" "chboot file system"
 	CHB_DEV="${DEV}"
 
 	# Get the filesystem type
+	[ "${quiet?}" != "y" ] && log_begin_msg "Getting chboot partition FS type"
 	CHB_FSTYPE=$(get_fstype "${CHB_DEV}")
 
 
@@ -284,12 +287,15 @@ chboot_mount_root(){
 	#roflag=-w
 	
 
+	[ "${quiet?}" != "y" ] && log_begin_msg "Checking chboot partition filesystem"
 	checkfs "${CHB_DEV}" chboot "${CHB_FSTYPE}"
 
 	# Mount chboot
+	[ "${quiet?}" != "y" ] && log_begin_msg "Mounting chboot partition"
 	mount ${roflag} -t "${CHB_FSTYPE}" ${CHB_FLAGS} "${CHB_DEV}" "${chbmnt?}"
 	mountchboot_status="$?"
 	[ $mountchboot_status -eq 0 ] || panic "Error mounting chboot partition!"
+	[ "${quiet?}" != "y" ] && log_begin_msg "Getting chboot image file"
 	CHB_IMG_FILE="$(chboot_get_image)"
 	[ "$CHB_IMG_FILE" ] || panic "chboot image file not found"
 
