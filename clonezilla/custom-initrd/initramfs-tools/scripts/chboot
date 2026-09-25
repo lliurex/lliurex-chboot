@@ -234,11 +234,11 @@ local_device_setup()
 chboot_get_image(){
 	CHB_IMG_LIST=""
 	CHB_IMG_FILE=""
-	if [ -z "$CHB_IMG_NAME" ] ; then
-		CHB_IMG_LIST="${CHB_IMAGE_NAME}"
+	if [ "$CHB_IMG_NAME" ] ; then
+		CHB_IMG_LIST="${CHB_IMG_NAME}"
 	else
 		for t in $CHB_IMG_EXTS ; do
-			CHB_IMG_LIST="$CHB_IMG_LIST ${CHB_IMAGE_BASE}.${t}"
+			CHB_IMG_LIST="$CHB_IMG_LIST ${CHB_IMG_BASE}.${t}"
 		done
 	fi
 	for f in $CHB_IMG_LIST ; do
