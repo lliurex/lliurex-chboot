@@ -428,5 +428,6 @@ chboot_install_grub(){
 		for d in /sys/firmware/efi/efivars /run /sys /proc /dev/pts /dev /boot/efi  ; do umount ${rootmnt}${d}; done  
 		umount ${rootmnt}
 	fi
+	return $rc
 }
 
