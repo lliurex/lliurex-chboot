@@ -9,8 +9,10 @@ export CHB_GRUB=
 export ROOT_DEV=
 export CHB_DIR=
 export CHB_FLAGS=
-export CHB_IMAGE="chboot-image"
-export CHB_IMG_TYPES="zst"
+export CHB_IMG_BASE="chboot-image"
+export CHB_IMG_NAME=""
+export CHB_IMG_FILE=""
+export CHB_IMG_EXTS="zst"
 export chbmnt=/chboot
 export efimnt=/efi
 
@@ -29,6 +31,9 @@ for x in $(cat /proc/cmdline); do
                 ;;
         chb.grub=*) 
                 CHB_GRUB=${x#chb.grub=}
+                ;;
+        chb.img=*) 
+                CHB_IMG_NAME=${x#chb.img=}
                 ;;
         esac
 done
@@ -227,16 +232,20 @@ local_device_setup()
 }
 
 chboot_get_image(){
-	if [ ! -r "$chbmnt/$CHB_DIR"
-	chb_image=""
-	for t in $CHB_IMG_TYPES ; do
-		chb_image="${chbmnt}/${CHB_DIR}/${CHB_IMAGE}.${t}"
-		if [ -r "$chb_image" ] ; then
-			echo $chb_image" 
-			return
-		fi
+	CHB_IMG_LIST=""
+	CHB_IMG_FILE=""
+	if [ -z "$CHB_IMG_NAME" ] ; then
+		CHB_IMG_LIST="${CHB_IMAGE_NAME}"
+	else
+		for t in $CHB_IMG_EXTS ; do
+			CHB_IMG_LIST="$CHB_IMG_LIST ${CHB_IMAGE_BASE}.${t}"
+		done
+	fi
+	for f in $CHB_IMG_LIST ; do
+		F="${chbmnt}/${CHB_DIR}/${f}"
+		[ ! -r "$F" ] || CHB_IMG_FILE="$F"
 	done
-	return 1
+	echo "$CHB_IMG_FILE"
 }
 
 chboot_restore(){
@@ -281,8 +290,8 @@ chboot_mount_root(){
 	mount ${roflag} -t "${CHB_FSTYPE}" ${CHB_FLAGS} "${CHB_DEV}" "${chbmnt?}"
 	mountchboot_status="$?"
 	[ $mountchboot_status -eq 0 ] || panic "Error mounting chboot partition!"
-	chb_image="$(chboot_get_image)"
-	[ "$chb_image" ] || panic "chboot image file not found"
+	CHB_IMG_FILE="$(chboot_get_image)"
+	[ "$CHB_IMG_FILE" ] || panic "chboot image file not found"
 
 	# get ROOT device
 	if [ -z "${ROOT}" ]; then
@@ -291,7 +300,7 @@ chboot_mount_root(){
         local_device_setup "${ROOT}" "root file system"
         ROOT="${DEV}"
 
-	chboot_restore "$chb_image" "$ROOT" || panic "Error restoring image file!!!"
+	chboot_restore "$CHB_IMG_FILE" "$ROOT" || panic "Error restoring image file!!!"
 
 	# Get root filesystem type and mount root
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
