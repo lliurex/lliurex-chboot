@@ -8,7 +8,7 @@ GRUB_DISTRIBUTOR="LLiureX 23 CHBOOT RESTORE"
 . "$pkgdatadir/grub-mkconfig_lib"
 
 BOOT_DIR="/boot"
-CHBOOT_DIR="/initrd"
+CHBOOT_DIR="/chboot"
 CHBOOT_INITRD=""
 
 get_uuid(){
