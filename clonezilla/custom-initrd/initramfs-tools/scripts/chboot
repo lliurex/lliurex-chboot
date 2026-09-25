@@ -322,7 +322,7 @@ chboot_mount_root(){
         CHB_EFI="${DEV}"
 	EFI_FSTYPE="$(get_fstype "${CHB_EFI}")"
 	roflag=-w
-	mount ${roflag} -t "${EFI_FSTYPE}" ${EFI_FLAGS} "$CHB_EFI}" "${efimnt?}"
+	mount ${roflag} -t "${EFI_FSTYPE}" ${EFI_FLAGS} "${CHB_EFI}" "${efimnt?}"
 	mountefi_status="$?"
 	[ $mountefi_status -eq 0 ] || panic "Error mounting EFI partition!"
 	
@@ -399,31 +399,29 @@ mount_bottom()
 
 chboot_cp_root_files(){
 	rc=0
-	EFIVARS_DIR="/sys/firmware/efi/efivars"
-	# test if efivarfs is already mounted
-	ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR || rc=1
-
-	if [ $rc -eq 0 ] ; then
-		# TODO: generalize this
-		# copy etc files
-		for d in etc ; do
-			SOURCE_DIR="$chbmnt/$CHB_DIR/$d"
-			DEST_DIR="${rootmnt}/$d"
-			ls -1 "$SOURCE_DIR" |while read f; do cp "$SOURCE_DIR/$f" "$DEST_DIR/$f" || rc=2 ; done
-		done
-	fi
+	# TODO: generalize this
+	# copy etc files
+	for d in etc ; do
+		SOURCE_DIR="$chbmnt/$CHB_DIR/$d"
+		DEST_DIR="${rootmnt}/$d"
+		ls -1 "$SOURCE_DIR" |while read f; do cp "$SOURCE_DIR/$f" "$DEST_DIR/$f" || rc=1 ; done
+	done
 	return $rc
 }
 
 chboot_install_grub(){
 	DEST_DISK="$1"
 	rc=0
+	EFIVARS_DIR="/sys/firmware/efi/efivars"
+	# test if efivarfs is already mounted
+	ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR || rc=1
+
 	# do bind mounts
-	for d in /dev /dev/pts /proc /sys /run $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=1; done
+	for d in /dev /dev/pts /proc /sys /run $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=2; done
 
 	# install and update grub in chroot
-	[ $rc -ne 0 ] || chroot "${rootmnt}" grub-install $DEST_DISK || rc=2
-	[ $rc -ne 0 ] || chroot "${rootmnt}" update-grub || rc=3
+	[ $rc -ne 0 ] || chroot "${rootmnt}" grub-install $DEST_DISK || rc=3
+	[ $rc -ne 0 ] || chroot "${rootmnt}" update-grub || rc=4
 
 	# umount bind  and root dir
 	if [ $rc -eq 0 ] ; then
