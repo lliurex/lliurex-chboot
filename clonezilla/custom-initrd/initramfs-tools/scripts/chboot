@@ -401,7 +401,7 @@ chboot_cp_root_files(){
 	# test if efivarfs is already mounted
 	ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR || rc=1
 
-	if [ $rc -eq 0 ] ; do
+	if [ $rc -eq 0 ] ; then
 		# TODO: generalize this
 		# copy etc files
 		for d in etc ; do
