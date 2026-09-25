@@ -256,8 +256,10 @@ chboot_restore(){
 	DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
 	CAT_CMD="zstdcat"
 	#TODO: Determine compression type and use apropiate tool
-
-	$CAT_CMD "$IMAGE_FILE" |partclone.restore -I -C -d -s - -o $DEST_PART || rc=?$
+	
+	# create log dir (partclone requires this directory)
+	mkdir -p /var/log
+	$CAT_CMD "$IMAGE_FILE" |partclone.restore -I -C -d -s - -o $DEST_PART || rc=$?
 
 	#clean and resize
 	[ $rc -ne 0 ] || e2fsck -f $DEST_PART || rc=$?
