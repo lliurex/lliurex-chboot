@@ -418,11 +418,11 @@ chboot_cp_root_files(){
 
 chboot_install_grub(){
 	DEST_DISK="$1"
-	rc=0
 	EFIVARS_DIR="/sys/firmware/efi/efivars"
 	# test if efivarfs is already mounted
 	_not_empty_dir "${EFIVARS_DIR}" || mount -t efivarfs none $EFIVARS_DIR || return 1
 
+	rc=0
 	# do bind mounts
 	for d in /dev /dev/pts /proc /sys /run /boot/efi $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=2; done
 
