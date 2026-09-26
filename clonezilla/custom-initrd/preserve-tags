@@ -1,0 +1,21 @@
+#!/bin/sh
+usage(){
+	echo "Usage: $(basename "$0") DESTINATION_DIR" >&2
+	exit 1
+}
+
+if [ $(id -u) -ne 0 ] ; then
+	echo "Ypu must run this script as root to preserve all file atributes" >&2
+	usage
+fi
+
+TAGS_DIR_LIST="/etc/lliurex-auto-upgrade/tags"
+
+DEST_DIR="$1"
+[ "$DEST_DIR" ] || usage
+
+mkdir -p "$DEST_DIR"
+for d in $TAGS_DIR_LIST ; do
+	find $d |rsync -a --files-from=- / "$DEST_DIR"
+done
+

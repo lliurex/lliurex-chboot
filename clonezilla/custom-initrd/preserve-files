@@ -1,0 +1,23 @@
+#!/bin/sh
+usage(){
+	echo "Usage: $(basename "$0") PLAIN_FILE_LIST DESTINATION_DIR" >&2
+	exit 1
+}
+
+if [ $(id -u) -ne 0 ] ; then
+	echo "Ypu must run this script as root to preserve all file atributes" >&2
+	usage
+fi
+
+FILE_LIST="$1"
+if [ -z "$FILE_LIST" ] || [ ! -s "$FILE_LIST" ] ; then
+	usage
+fi
+
+DEST_DIR="$2"
+[ "$DEST_DIR" ] || usage
+
+
+mkdir -p "$DEST_DIR"
+
+rsync -a --files-from=$FILE_LIST / "$DEST_DIR"
