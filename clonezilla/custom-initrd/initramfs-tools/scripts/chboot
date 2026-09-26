@@ -14,7 +14,7 @@ export CHB_IMG_NAME=""
 export CHB_IMG_FILE=""
 export CHB_IMG_EXTS="zst"
 export chbmnt=/chboot
-export efimnt=/efi
+export efimnt=/boot/efi
 
 # Parse chboot specific command line options
 # outside functions to create global vars
@@ -74,7 +74,7 @@ chboot_premount()
 		[ "$quiet" != "y" ] && log_end_msg
 	fi
 	for d in $chbmnt $efimnt ; do
-		[ -d "$d" ] || mkdir -m 0700 "$d"
+		[ -d "$d" ] || mkdir -p -m 0700 "$d"
 	done
 	chboot_premount_used=yes
 }
@@ -284,10 +284,8 @@ chboot_mount_root(){
 	[ "${quiet?}" != "y" ] && log_begin_msg "Getting chboot partition FS type"
 	CHB_FSTYPE=$(get_fstype "${CHB_DEV}")
 
-
-	roflag=-r
-	#roflag=-w
-	
+	roflag=-w
+	# mount with write permissions all the needed dirs
 
 	[ "${quiet?}" != "y" ] && log_begin_msg "Checking chboot partition filesystem"
 	checkfs "${CHB_DEV}" chboot "${CHB_FSTYPE}"
@@ -312,7 +310,6 @@ chboot_mount_root(){
 
 	# Get root filesystem type and mount root
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
-	roflag=-w
 	mount ${roflag} -t "${ROOTFSTYPE}"  ${ROOTFLAGS} "${ROOT}" "${rootmnt?}"
         mountroot_status="$?"
         [ $mountroot_status -eq 0 ] || panic "Error mounting root partition!"
@@ -321,7 +318,6 @@ chboot_mount_root(){
         local_device_setup "${CHB_EFI}" "EFI partition"
         CHB_EFI="${DEV}"
 	EFI_FSTYPE="$(get_fstype "${CHB_EFI}")"
-	roflag=-w
 	mount ${roflag} -t "${EFI_FSTYPE}" ${EFI_FLAGS} "${CHB_EFI}" "${efimnt?}"
 	mountefi_status="$?"
 	[ $mountefi_status -eq 0 ] || panic "Error mounting EFI partition!"
@@ -397,6 +393,13 @@ mount_bottom()
 	chboot_bottom
 }
 
+chboot_preserve_files(){
+	FILE_LIST="/etc/fstab /etc/hosts /etc/hostname"
+	DEST_DIR=""
+	for f in $FILE_LIST ; do
+		cp -ax "$f" 
+	cp 
+}
 chboot_cp_root_files(){
 	rc=0
 	# TODO: generalize this
@@ -417,7 +420,7 @@ chboot_install_grub(){
 	ls -1 $EFIVARS_DIR 2>/dev/null |grep -q "." || mount -t efivarfs none $EFIVARS_DIR || rc=1
 
 	# do bind mounts
-	for d in /dev /dev/pts /proc /sys /run $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=2; done
+	for d in /dev /dev/pts /proc /sys /run /boot/efi $EFIVARS_DIR ; do mount --bind $d ${rootmnt}${d} || rc=2; done
 
 	# install and update grub in chroot
 	[ $rc -ne 0 ] || chroot "${rootmnt}" grub-install $DEST_DISK || rc=3
@@ -425,7 +428,7 @@ chboot_install_grub(){
 
 	# umount bind  and root dir
 	if [ $rc -eq 0 ] ; then
-		for d in /sys/firmware/efi/efivars /run /sys /proc /dev/pts /dev /boot/efi  ; do umount ${rootmnt}${d}; done  
+		for d in $EFIVARS_DIR /boot/efi /run /sys /proc /dev/pts /dev ; do umount ${rootmnt}${d}; done  
 		umount ${rootmnt}
 	fi
 	return $rc
