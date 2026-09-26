@@ -267,7 +267,7 @@ chboot_restore(){
 	[ $rc -ne 0 ] || resize2fs $DEST_PART || rc=$?
 
 	#restore UUID
-	[ $rc -ne 0 ] || tune2fs -U "$DEST_UUID" "$DEST_PART" || rc=$?
+	[ $rc -ne 0 ] || tune2fs -f -U "$DEST_UUID" "$DEST_PART" || rc=$?
 	return $rc
 }
 
@@ -410,7 +410,7 @@ chboot_cp_root_files(){
 		# TODO: find a better way to do this ...
 		CUR_DIR="$(pwd)"
 		cd ${SOURCE_DIR}
-		sudo cp -a ./ /${rootmnt}/ || rc=$?
+		cp -a ./ /${rootmnt}/ || rc=$?
 		cd "$CUR_DIR"
 	fi
 	return $rc
