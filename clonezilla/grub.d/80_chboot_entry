@@ -2,8 +2,11 @@
 
 GRUB_DISABLE_RECOVERY=true
 GRUB_DISABLE_SUBMENU=true
-GRUB_DISTRIBUTOR="LLiureX 23 CHBOOT RESTORE"
-#GRUB_CMDLINE_LINUX="boot=chboot chb.efi=UUID=1E52-9340 chb.dev=ed5f0a4e-51f9-4ae2-87d5-339d48c627e5 chb.dir=/initrd"
+[ "$CHBOOT_TITLE" ] || CHBOOT_TITLE="Unattended LliureX 25 install from DISK image"
+CHBOOT_URL_OPTION=""
+if [ "$CHBOOT_URL" ] ; then
+	CHBOOT_URL_OPTION="chb.url=$CHBOOT_URL"
+fi
 
 . "$pkgdatadir/grub-mkconfig_lib"
 
@@ -38,7 +41,7 @@ EFI_UUID="$(get_uuid "/boot/efi")"
 [ "$EFI_UUID" ] || exit 0
 
 cat <<EOF
-menuentry '${GRUB_DISTRIBUTOR}, with Linux ${KERNEL_VERSION}' --class lliurex --class gnu-linux --class gnu --class os \$menuentry_id_option 'gnulinux-${KERNEL_VERSION}-advanced-${ROOT_UUID}' {
+menuentry 'CHBOOT: ${CHBOOT_TITLE} (${KERNEL_VERSION})' --class lliurex --class gnu-linux --class gnu --class os \$menuentry_id_option 'gnulinux-${KERNEL_VERSION}-advanced-${ROOT_UUID}' {
         recordfail
         load_video
         gfxmode \$linux_gfx_mode
@@ -48,7 +51,7 @@ menuentry '${GRUB_DISTRIBUTOR}, with Linux ${KERNEL_VERSION}' --class lliurex --
         insmod ext2
         search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
         echo    'Loading Linux ${KERNEL_VERSION} for CHBOOT RESTORE ...'
-        linux   /boot/vmlinuz-${KERNEL_VERSION} root=UUID=${ROOT_UUID} ro boot=chboot chb.efi=UUID=${EFI_UUID} chb.dev=UUID=${CHBOOT_UUID} chb.dir=${CHBOOT_DIR} net.ifnames=0 rw $vt_handoff
+        linux   /boot/vmlinuz-${KERNEL_VERSION} root=UUID=${ROOT_UUID} ro boot=chboot chb.efi=UUID=${EFI_UUID} chb.dev=UUID=${CHBOOT_UUID} chb.dir=${CHBOOT_DIR} $CHBOOT_URL_OPTION net.ifnames=0 rw $vt_handoff
         echo    'Loading initial ramdisk ...'
         initrd  /boot/${CHBOOT_INITRD}
 }
