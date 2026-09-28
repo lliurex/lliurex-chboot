@@ -10,6 +10,7 @@ export ROOT_DEV=
 export CHB_DIR=
 export CHB_FLAGS=
 export CHB_INSTALL_DIR="/install"
+export CHB_URL=""
 export CHB_IMG_BASE="chboot-image"
 export CHB_IMG_NAME=""
 export CHB_IMG_FILE=""
@@ -33,8 +34,9 @@ for x in $(cat /proc/cmdline); do
         chb.grub=*) 
                 CHB_GRUB=${x#chb.grub=}
                 ;;
-        chb.img=*) 
-                CHB_IMG_NAME=${x#chb.img=}
+
+        chb.url=*) 
+                CHB_URL=${x#chb.url=}
                 ;;
         esac
 done
@@ -235,17 +237,24 @@ local_device_setup()
 chboot_get_image(){
 	CHB_IMG_LIST=""
 	CHB_IMG_FILE=""
-	if [ "$CHB_IMG_NAME" ] ; then
-		CHB_IMG_LIST="${CHB_IMG_NAME}"
+	if [ "$CHB_URL" ] ; then
+		# try to configure networking
+		configure_networking
+		# TODO: detect if network is up
+		CHB_IMG_FILE="$CHB_URL"
 	else
-		for t in $CHB_IMG_EXTS ; do
-			CHB_IMG_LIST="$CHB_IMG_LIST ${CHB_IMG_BASE}.${t}"
+		if [ "$CHB_IMG_NAME" ] ; then
+			CHB_IMG_LIST="${CHB_IMG_NAME}"
+		else
+			for t in $CHB_IMG_EXTS ; do
+				CHB_IMG_LIST="$CHB_IMG_LIST ${CHB_IMG_BASE}.${t}"
+			done
+		fi
+		for f in $CHB_IMG_LIST ; do
+			F="${chbmnt}/${CHB_DIR}/${f}"
+			[ ! -r "$F" ] || CHB_IMG_FILE="$F"
 		done
 	fi
-	for f in $CHB_IMG_LIST ; do
-		F="${chbmnt}/${CHB_DIR}/${f}"
-		[ ! -r "$F" ] || CHB_IMG_FILE="$F"
-	done
 	echo "$CHB_IMG_FILE"
 }
 
@@ -255,12 +264,17 @@ chboot_restore(){
 	DEST_PART="$2"
 	# preserve root partition UUID
 	DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
-	CAT_CMD="zstdcat"
-	#TODO: Determine compression type and use apropiate tool
+	CAT_CMD="cat"
+	#TODO: 1. Determine compression type and use apropiate tool
+	#      2. Improve URL detection
+	UNCOMPRESS_CMD="zstdcat -"
+	if echo "$IMAGE_FILE" |grep -q "^http[s]\?:" ; then
+		CAT_CMD="wget -O -"
+	fi
 	
 	# create log dir (partclone requires this directory)
 	mkdir -p /var/log
-	$CAT_CMD "$IMAGE_FILE" |partclone.restore -I -C -d -s - -o $DEST_PART || rc=$?
+	$CAT_CMD "$IMAGE_FILE" |$UNCOMPRESS_CMD |partclone.restore -I -C -d -s - -o $DEST_PART || rc=$?
 
 	#clean and resize
 	[ $rc -ne 0 ] || e2fsck -f $DEST_PART || rc=$?
