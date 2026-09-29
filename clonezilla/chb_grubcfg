@@ -44,8 +44,6 @@ cat <<EOF
 set timeout=10
 search --no-floppy --fs-uuid --set=root ${CHBOOT_UUID}
 
-menuentry 'UEFI Firmware Settings' $menuentry_id_option 'uefi-firmware' {
-
 menuentry 'CHBOOT: ${CHBOOT_TITLE} (${KERNEL_VERSION})' --class lliurex --class gnu-linux --class gnu --class os \$menuentry_id_option 'gnulinux-${KERNEL_VERSION}-advanced-${ROOT_UUID}' {
         recordfail
         load_video
