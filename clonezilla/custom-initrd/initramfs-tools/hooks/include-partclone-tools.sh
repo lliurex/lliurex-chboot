@@ -15,7 +15,7 @@ esac
 
 # Copy required disk utilities to the initramfs
 
-for b in /usr/sbin/resize2fs /usr/sbin/e2fsck /usr/bin/lsblk /usr/sbin/tune2fs ; do
+for b in /usr/sbin/partclone.restore /usr/sbin/partclone.extfs /usr/sbin/partclone.xfs /usr/sbin/partclone.reiser4 /usr/sbin/partclone.btrfs ; do
 	copy_exec $b
 done
 
