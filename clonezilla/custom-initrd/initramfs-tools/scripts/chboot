@@ -11,6 +11,7 @@ export CHB_DIR=
 export CHB_FLAGS=
 export CHB_INSTALL_DIR="/install"
 export CHB_URL=""
+export CHB_ROOT_UUID=""
 export CHB_IMG_BASE="chboot-image"
 export CHB_IMG_NAME=""
 export CHB_IMG_FILE=""
@@ -38,11 +39,17 @@ for x in $(cat /proc/cmdline); do
         chb.url=*) 
                 CHB_URL=${x#chb.url=}
                 ;;
+        chb.url=*) 
+                CHB_URL=${x#chb.url=}
+                ;;
+        chb.uuid=*) 
+                CHB_ROOT_UUID=${x#chb.uuid=}
+                ;;
         esac
 done
 
-for v in "$CHB_EFI" "$CHB_DEV" "$CHB_DIR" ; do
-	[ "${v}" ] || panic "Boot arguments must include chb.efi=, chb.dev= and chb.dir= parameters. Dropping to a shell!"
+for v in "$CHB_EFI" "$CHB_DEV" "$CHB_DIR" "$CHB_ROOT_UUID" ; do
+	[ "${v}" ] || panic "Boot arguments must include chb.uuid=, chb.efi=, chb.dev= and chb.dir= parameters. Dropping to a shell!"
 done
 
 chboot_reboot(){
@@ -263,7 +270,9 @@ chboot_restore(){
 	IMAGE_FILE="$1"
 	DEST_PART="$2"
 	# preserve root partition UUID
-	DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
+	# this is not required now, we are using CHB_ROOT_UUID
+	# DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
+	DEST_UUID="$CHB_ROOT_UUID"
 	CAT_CMD="cat"
 	#TODO: 1. Determine compression type and use apropiate tool
 	#      2. Improve URL detection
