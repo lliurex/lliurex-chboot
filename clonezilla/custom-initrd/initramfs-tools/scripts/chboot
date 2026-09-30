@@ -283,6 +283,7 @@ chboot_restore(){
 	
 	# create log dir (partclone requires this directory)
 	mkdir -p /var/log
+	echo "TERM: $TERM"
 	$CAT_CMD "$IMAGE_FILE" |$UNCOMPRESS_CMD |partclone.restore -I -C -d -s - -o $DEST_PART || rc=$?
 
 	#clean and resize
