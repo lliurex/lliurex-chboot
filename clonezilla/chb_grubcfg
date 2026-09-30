@@ -76,9 +76,9 @@ menuentry 'CHBOOT: ${CHBOOT_TITLE} (${KERNEL_VERSION})' --class lliurex --class 
 }
 
 search --no-floppy --fs-uuid --set=oldroot ${ROOT_UUID}
-if [ -e \$oldroot\boot\grub\grub.cfg ] ; then
+if [ -e (\$oldroot)/boot/grub/grub.cfg ] ; then
 	menuentry 'Run old grub configuration to start LliureX' {
-		configfile \$oldroot\boot\grub\grub.cfg 
+		configfile (\$oldroot)/boot/grub/grub.cfg 
 	}
 fi
 
