@@ -280,6 +280,9 @@ chboot_save(){
 	# Get root filesystem type
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
 	PARTCLONE_CMD="partclone.$ROOTFSTYPE"
+	if echo "$ROOTFSTYPE" |grep -q "^ext[[:digit:]]" ; then
+		PARTCLONE_CMD="partclone.extfs"
+	fi
 	which "$PARTCLONE_CMD" || panic "Filesystem $ROOTFSTYPE not supported!"
 	
 	#TODO: Determine compression type and use apropiate tool
