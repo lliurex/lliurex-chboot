@@ -56,6 +56,10 @@ fi
 EFI_UUID="$(get_uuid "/boot/efi")"
 [ "$EFI_UUID" ] || exit 0
 
+pkgdatadir=/usr/lib/grub
+GRUB_THEME=""
+. /etc/grub.d/00_header
+
 cat <<EOF
 set timeout=10
 search --no-floppy --fs-uuid --set=root ${CHBOOT_UUID}
