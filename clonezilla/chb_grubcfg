@@ -74,5 +74,13 @@ menuentry 'CHBOOT: ${CHBOOT_TITLE} (${KERNEL_VERSION})' --class lliurex --class 
         echo    'Loading initial ramdisk ...'
         initrd  /boot/${CHBOOT_INITRD}
 }
+
+search --no-floppy --fs-uuid --set=oldroot ${ROOT_UUID}
+if [ -e \$oldroot\boot\grub\grub.cfg ] ; then
+	menuentry 'Run old grub configuration to start LliureX' {
+		configfile \$oldroot\boot\grub\grub.cfg 
+	}
+fi
+
 EOF
 
