@@ -19,6 +19,7 @@ export CHB_IMG_EXTS="zst"
 export chbmnt="/chboot"
 export efimnt="/boot/efi"
 export CHB_NCURSES=""
+export CHB_MODE="restore"
 
 # Parse chboot specific command line options
 # outside functions to create global vars
@@ -45,6 +46,9 @@ for x in $(cat /proc/cmdline); do
                 ;;
         chb.uuid=*) 
                 CHB_ROOT_UUID=${x#chb.uuid=}
+                ;;
+        chb.savepart) 
+                CHB_MODE="save"
                 ;;
         chb.ncurses) 
                 CHB_NCURSES="-N"
@@ -269,6 +273,21 @@ chboot_get_image(){
 	echo "$CHB_IMG_FILE"
 }
 
+chboot_save(){
+	rc=0
+	IMAGE_FILE="$1"
+	ROOT="$2"
+	# Get root filesystem type
+	ROOTFSTYPE="$(get_fstype "${ROOT}")"
+	PARTCLONE_CMD="partclone.$ROOTFSTYPE"
+	which "$PARTCLONE_CMD" || panic "Filesystem $ROOTFSTYPE not supported!"
+	
+	#TODO: Determine compression type and use apropiate tool
+	COMPRESS_CMD="zstd -19 -T0"
+	$PARTCLONE_CMD $CHB_NCURSES -c -s $ROOT |$COMPRESS_CMD > "$IMAGE_FILE" || rc=$?
+	return $rc
+}
+
 chboot_restore(){
 	rc=0
 	IMAGE_FILE="$1"
@@ -285,8 +304,6 @@ chboot_restore(){
 		CAT_CMD="wget -O -"
 	fi
 	
-	# create log dir (partclone requires this directory)
-	mkdir -p /var/log
 	echo "TERM: $TERM"
 	$CAT_CMD "$IMAGE_FILE" |$UNCOMPRESS_CMD |partclone.restore $CHB_NCURSES -I -C -d -s - -o $DEST_PART || rc=$?
 
@@ -335,17 +352,30 @@ chboot_mount_root(){
         local_device_setup "${ROOT}" "root file system"
         ROOT="${DEV}"
 
+	# create log dir (partclone requires this directory)
+	mkdir -p /var/log
+
+	if [ "$CHB_MODE" = "save" ] ; then
+		chboot_save "$CHB_IMG_FILE" "$ROOT" || panic "Error restoring image file!!!"
+		echo ""
+		echo "$ROOT partition saved as $CHB_IMG_FILE"
+		echo "Press [ENTER] to reboot"
+		read a
+		chboot_reboot
+	fi
+
+	# restore mode
 	chboot_restore "$CHB_IMG_FILE" "$ROOT" || panic "Error restoring image file!!!"
 
 	# Get root filesystem type and mount root
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
 	mount ${roflag} -t "${ROOTFSTYPE}"  ${ROOTFLAGS} "${ROOT}" "${rootmnt?}"
-        mountroot_status="$?"
-        [ $mountroot_status -eq 0 ] || panic "Error mounting root partition!"
+       	mountroot_status="$?"
+       	[ $mountroot_status -eq 0 ] || panic "Error mounting root partition!"
 
 	# Mount efi partition
-        local_device_setup "${CHB_EFI}" "EFI partition"
-        CHB_EFI="${DEV}"
+       	local_device_setup "${CHB_EFI}" "EFI partition"
+       	CHB_EFI="${DEV}"
 	EFI_FSTYPE="$(get_fstype "${CHB_EFI}")"
 	mount ${roflag} -t "${EFI_FSTYPE}" ${EFI_FLAGS} "${CHB_EFI}" "${efimnt?}"
 	mountefi_status="$?"
