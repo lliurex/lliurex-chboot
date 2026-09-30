@@ -10,7 +10,7 @@ fi
 
 # . "$pkgdatadir/grub-mkconfig_lib"
 
-BOOT_DIR="/boot"
+BOOT_DIR="/mnt/boot"
 CHBOOT_DIR="/chboot"
 CHBOOT_INITRD=""
 
