@@ -1,4 +1,15 @@
 #!/bin/sh
+BOOT_DIR="/mnt/boot"
+CHBOOT_DIR="/chboot"
+
+# create initrd and copy kernel to chboot boot dir
+#
+
+mkinitramfs -d initramfs-tools/  -o $BOOT_DIR/initrd_chboot.img-$(uname -r)
+cp /boot/vmlinuz-$(uname -r) $BOOT_DIR/
+
+# generate grub.cfg 
+mkdir -p "$BOOT_DIR/grub"
 
 GRUB_DISABLE_RECOVERY=true
 GRUB_DISABLE_SUBMENU=true
@@ -10,8 +21,6 @@ fi
 
 # . "$pkgdatadir/grub-mkconfig_lib"
 
-BOOT_DIR="/mnt/boot"
-CHBOOT_DIR="/chboot"
 CHBOOT_INITRD=""
 
 get_disk_id(){
@@ -60,7 +69,7 @@ pkgdatadir=/usr/lib/grub
 GRUB_THEME=""
 . /etc/grub.d/00_header
 
-cat <<EOF
+cat <<EOF > "$BOOT_DIR/grub/grub.cfg"
 set timeout=10
 search --no-floppy --fs-uuid --set=root ${CHBOOT_UUID}
 
