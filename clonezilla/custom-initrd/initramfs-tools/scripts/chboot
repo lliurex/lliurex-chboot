@@ -41,8 +41,8 @@ for x in $(cat /proc/cmdline); do
         chb.url=*) 
                 CHB_URL=${x#chb.url=}
                 ;;
-        chb.url=*) 
-                CHB_URL=${x#chb.url=}
+        chb.img=*) 
+                CHB_IMG_NAME=${x#chb.img=}
                 ;;
         chb.uuid=*) 
                 CHB_ROOT_UUID=${x#chb.uuid=}
