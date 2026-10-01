@@ -16,6 +16,10 @@ esac
 # Copy terminfo data from host
 # TODO: copy only required data
 
-mkdir -p ${DESTDIR}/usr/share
-cp -r /usr/share/terminfo ${DESTDIR}/usr/share/
+# include jammy and noble dirs
+
+for d in usr/share lib ; do
+	mkdir -p ${DESTDIR}/$d
+	cp -r /$d/terminfo ${DESTDIR}/$d
+done
 
