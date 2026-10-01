@@ -3,4 +3,5 @@ partclone
 e2fsprogs
 util-linux
 ncurses-base
+rsync
 (ncurses-term)
