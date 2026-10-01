@@ -2,3 +2,5 @@ xz-utils
 partclone
 e2fsprogs
 util-linux
+ncurses-base
+(ncurses-term)
