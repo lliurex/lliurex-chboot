@@ -273,10 +273,17 @@ chboot_get_image(){
 	echo "$CHB_IMG_FILE"
 }
 
-chboot_save(){
+
+chboot_save_image(){
 	rc=0
-	IMAGE_FILE="$1"
-	ROOT="$2"
+	if [ -z "$CHB_IMG_NAME" ] ; then
+		DEF_IMG_EXT="$(echo "$CHB_IMG_EXTS" |sed -e "s%\s.*$%%")"
+		CHB_IMG_NAME="${CHB_IMG_BASE}.${DEF_IMG_EXT}"
+	fi
+	IMG_DIR="${chbmnt}/${CHB_DIR}"
+	mkdir -p "$IMG_DIR"
+	IMAGE_FILE="${IMG_DIR}/$CHB_IMG_NAME"
+	ROOT="$1"
 	# Get root filesystem type
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
 	PARTCLONE_CMD="partclone.$ROOTFSTYPE"
@@ -345,8 +352,6 @@ chboot_mount_root(){
 	mountchboot_status="$?"
 	[ $mountchboot_status -eq 0 ] || panic "Error mounting chboot partition!"
 	[ "${quiet?}" != "y" ] && log_begin_msg "Getting chboot image file"
-	CHB_IMG_FILE="$(chboot_get_image)"
-	[ "$CHB_IMG_FILE" ] || panic "chboot image file not found"
 
 	# get ROOT device
 	if [ -z "${ROOT}" ]; then
@@ -359,7 +364,7 @@ chboot_mount_root(){
 	mkdir -p /var/log
 
 	if [ "$CHB_MODE" = "save" ] ; then
-		chboot_save "$CHB_IMG_FILE" "$ROOT" || panic "Error restoring image file!!!"
+		chboot_save_image "$ROOT" || panic "Error restoring image file!!!"
 		echo ""
 		echo "$ROOT partition saved as $CHB_IMG_FILE"
 		echo "Press [ENTER] to reboot"
@@ -368,6 +373,9 @@ chboot_mount_root(){
 	fi
 
 	# restore mode
+	CHB_IMG_FILE="$(chboot_get_image)"
+	[ "$CHB_IMG_FILE" ] || panic "chboot image file not found"
+
 	chboot_restore "$CHB_IMG_FILE" "$ROOT" || panic "Error restoring image file!!!"
 
 	# Get root filesystem type and mount root
