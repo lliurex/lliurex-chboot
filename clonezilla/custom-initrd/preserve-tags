@@ -16,6 +16,6 @@ DEST_DIR="$1"
 
 mkdir -p "$DEST_DIR"
 for d in $TAGS_DIR_LIST ; do
-	find $d |rsync -a --files-from=- / "$DEST_DIR"
+	find $d |grep -v "\." |rsync -a --files-from=- / "$DEST_DIR"
 done
 
