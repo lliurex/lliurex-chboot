@@ -89,6 +89,8 @@ if [ -z "$FILE_LIST" ] || [ ! -s "$FILE_LIST" ] ; then
 fi
 
 DEST_DIR="$CHBOOT_DIR/files"
+rm -fr "$DEST_DIR"
+
 mkdir -p "$DEST_DIR"
 rsync -a --files-from=$FILE_LIST / "$DEST_DIR" || error_msg
 
