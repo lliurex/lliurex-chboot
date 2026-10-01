@@ -4,6 +4,13 @@ CHBOOT_DIRNAME="chboot"
 BOOT_DIR="$MOUNT_POINT/boot"
 CHBOOT_DIR="$MOUNT_POINT/$CHBOOT_DIRNAME"
 
+echo "CHBOOT mountpoint: $MOUNT_POINT"
+echo "CHBOOT image and files directory: $CHBOOT_DIR"
+echo "CHBOOT boot directory (for grub): $BOOT_DIR"
+echo ""
+echo "Press ENTER to install files"
+read a
+
 get_disk_id(){
 	MOUNT_POINT="$1"
 	ID_TYPE="$2"
