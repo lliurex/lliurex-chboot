@@ -249,6 +249,30 @@ local_device_setup()
 	DEV="${real_dev}"
 }
 
+chboot_compression_cmd(){
+	IMAGE_NAME="$1"
+	COMPRESS_MODE="$2"
+	CTYPE="$(echo "$IMAGE_NAME" |sed -e "s%\.parts$%%;s%^.*\.%%")"
+	case "$CTYPE" in
+		xz)
+			CMD="xz -9e -c"
+			#UNCMD="xz --decompress -c"
+			UNCMD="xzcat"
+			;;
+		*)
+			# default is zstd
+			CMD="zstd -19 -T0"
+			#UNCMD="zstd -dcf"
+			UNCMD="zstdcat"
+		;;
+	esac
+	if [ "$COMPRESS_MODE" = "compress" ]; then
+		echo "$CMD"
+	else
+		echo "$UNCMD"
+	fi		
+}
+
 chboot_get_image(){
 	CHB_IMG_LIST=""
 	CHB_IMG_FILE=""
@@ -269,7 +293,7 @@ chboot_get_image(){
 			F="${chbmnt}/${CHB_DIR}/${f}"
 			[ ! -r "$F" ] || CHB_IMG_FILE="$F"
 		done
-	fi
+fi
 	echo "$CHB_IMG_FILE"
 }
 
@@ -282,7 +306,7 @@ chboot_save_image(){
 	fi
 	IMG_DIR="${chbmnt}/${CHB_DIR}"
 	mkdir -p "$IMG_DIR"
-	IMAGE_FILE="${IMG_DIR}/$CHB_IMG_NAME"
+	CHB_IMAGE_FILE="${IMG_DIR}/$CHB_IMG_NAME"
 	ROOT="$1"
 	# Get root filesystem type
 	ROOTFSTYPE="$(get_fstype "${ROOT}")"
@@ -292,9 +316,11 @@ chboot_save_image(){
 	fi
 	which "$PARTCLONE_CMD" || panic "Filesystem $ROOTFSTYPE not supported!"
 	
-	#TODO: Determine compression type and use apropiate tool
-	COMPRESS_CMD="zstd -19 -T0"
-	$PARTCLONE_CMD $CHB_NCURSES -c -s $ROOT |$COMPRESS_CMD > "$IMAGE_FILE" || rc=$?
+	#DONE: Determine compression type and use apropiate tool
+	#COMPRESS_CMD="zstd -19 -T0"
+	COMPRESS_CMD="$(chboot_compression_cmd "$CHB_IMAGE_FILE" "compress")"
+
+	$PARTCLONE_CMD $CHB_NCURSES -c -s $ROOT |$COMPRESS_CMD > "$CHB_IMAGE_FILE" || rc=$?
 	return $rc
 }
 
@@ -307,9 +333,11 @@ chboot_restore(){
 	# DEST_UUID="$(lsblk -nplo UUID $DEST_PART)"
 	DEST_UUID="$CHB_ROOT_UUID"
 	CAT_CMD="cat"
-	#TODO: 1. Determine compression type and use apropiate tool
-	#      2. Improve URL detection
-	UNCOMPRESS_CMD="zstdcat -"
+	#DONE: 1. Determine compression type and use apropiate tool
+	#TODO: 2. Improve URL detection
+	#UNCOMPRESS_CMD="zstdcat -"
+	UNCOMPRESS_CMD="$(chboot_compression_cmd "$IMAGE_FILE" "uncompress")"
+
 	if echo "$IMAGE_FILE" |grep -q "^http[s]\?:" ; then
 		CAT_CMD="wget -O -"
 	fi
