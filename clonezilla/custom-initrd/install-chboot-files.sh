@@ -11,6 +11,11 @@ echo ""
 echo "Press ENTER to install files"
 read a
 
+error_msg(){
+	echo "Error"
+	exit 1
+}
+
 get_disk_id(){
 	MOUNT_POINT="$1"
 	ID_TYPE="$2"
@@ -66,18 +71,34 @@ EOF
 ######### MAIN ##########
 
 if [ $(id -u) -ne 0 ] ; then
-	echo "Ypu must run this script as root to preserve all file atributes" >&2
+	echo "You must run this script as root to preserve all file atributes" >&2
 	usage
 fi
 
-# create initrd and copy kernel to chboot boot dir
+echo "Create initrd and copy kernel to chboot boot dir ..."
 #
 mkdir -p "$BOOT_DIR"
-mkinitramfs -d initramfs-tools/  -o $BOOT_DIR/initrd_chboot.img-$(uname -r)
-cp /boot/vmlinuz-$(uname -r) $BOOT_DIR/
+mkinitramfs -d initramfs-tools/  -o $BOOT_DIR/initrd_chboot.img-$(uname -r) || error_msg
+cp /boot/vmlinuz-$(uname -r) $BOOT_DIR/ || error_msg
 
-# generate grub.cfg 
-mkdir -p "$BOOT_DIR/grub"
+
+FILE_LIST="preserve-list.txt"
+echo "Preserve files from $FILE_LIST ..."
+if [ -z "$FILE_LIST" ] || [ ! -s "$FILE_LIST" ] ; then
+	error_msg
+fi
+
+DEST_DIR="$CHBOOT_DIR/files"
+mkdir -p "$DEST_DIR"
+rsync -a --files-from=$FILE_LIST / "$DEST_DIR" || error_msg
+
+echo "Preserve tags ..."
+TAGS_DIR_LIST="/etc/lliurex-auto-upgrade/tags"
+
+for d in $TAGS_DIR_LIST ; do
+	find $d |grep -v "\." |rsync -a --files-from=- / "$DEST_DIR" || error_msg
+done
+
 
 GRUB_DISABLE_RECOVERY=true
 GRUB_DISABLE_SUBMENU=true
@@ -86,49 +107,38 @@ CHBOOT_URL_OPTION=""
 if [ "$CHBOOT_URL" ] ; then
 	CHBOOT_URL_OPTION="chb.url=$CHBOOT_URL"
 fi
-
-# preserve files
-FILE_LIST="depends.txt"
-if [ -z "$FILE_LIST" ] || [ ! -s "$FILE_LIST" ] ; then
-	exit 0
-fi
-
-DEST_DIR="$CHBOOT_DIR/files"
-mkdir -p "$DEST_DIR"
-rsync -a --files-from=$FILE_LIST / "$DEST_DIR"
-
-# preserve tags
-TAGS_DIR_LIST="/etc/lliurex-auto-upgrade/tags"
-
-for d in $TAGS_DIR_LIST ; do
-	find $d |grep -v "\." |rsync -a --files-from=- / "$DEST_DIR"
-done
-
-
 # find chboot initrd
 CHBOOT_INITRD=""
 
+echo "Find initrd chboot ..."
+
 CHBOOT_INITRD="$(ls -1 "$BOOT_DIR" | grep "^initrd_chboot.img" |tail -1)"
-[ "$CHBOOT_INITRD" ] || exit 0
+[ "$CHBOOT_INITRD" ] || error_msg
 
 KERNEL_VERSION="${CHBOOT_INITRD#*-}"
 
+echo "Find chboot UUID ..."
 # find chboot partition
 CHBOOT_BY_LABEL="/dev/disk/by-label/chboot"
-[ -e "$CHBOOT_BY_LABEL" ] || exit 0
+[ -e "$CHBOOT_BY_LABEL" ] || error_msg
 CHBOOT_PART="$(readlink -f "$CHBOOT_BY_LABEL")"
 CHBOOT_UUID="$(lsblk -nplo UUID "$CHBOOT_PART")"
 
+echo "Find ROOT (/) UUID ..."
 # find current root partition
 ROOT_UUID="$(get_uuid "/")"
 ROOT_PARTUUID="$(get_partuuid "/")"
 if [ -z "$ROOT_UUID" ] || [ -z "$ROOT_PARTUUID" ] ; then
-	exit 0
+	error_msg
 fi
 
+echo "Find EFI UUID ..."
 # find efi partition
 EFI_UUID="$(get_uuid "/boot/efi")"
-[ "$EFI_UUID" ] || exit 0
+[ "$EFI_UUID" ] || error_msg
 
-gen_grub_cfg > "$BOOT_DIR/grub/grub.cfg"
+echo "Generate grub.cfg ..."
+mkdir -p "$BOOT_DIR/grub"
+
+gen_grub_cfg > "$BOOT_DIR/grub/grub.cfg" || error_msg
 
