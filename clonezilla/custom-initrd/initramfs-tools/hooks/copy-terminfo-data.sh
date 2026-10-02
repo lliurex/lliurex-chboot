@@ -19,7 +19,9 @@ esac
 # include jammy and noble dirs
 
 for d in usr/share lib ; do
-	mkdir -p ${DESTDIR}/$d
-	cp -r /$d/terminfo ${DESTDIR}/$d
+	if [ -d  /$d/terminfo  ] ; then
+		mkdir -p ${DESTDIR}/$d
+		cp -r /$d/terminfo ${DESTDIR}/$d
+	fi
 done
 
