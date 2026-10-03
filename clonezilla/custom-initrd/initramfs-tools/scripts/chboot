@@ -350,7 +350,7 @@ chboot_restore(){
 	[ $rc -ne 0 ] || resize2fs $DEST_PART || rc=$?
 
 	#restore UUID
-	[ $rc -ne 0 ] || tune2fs -f -U "$DEST_UUID" "$DEST_PART" || rc=$?
+	[ $rc -ne 0 ] || echo "y" |tune2fs -f -U "$DEST_UUID" "$DEST_PART" || rc=$?
 	return $rc
 }
 
