@@ -1,11 +1,11 @@
 #!/bin/sh
 
-# shellcheck disable=SC2034
 PREREQ=""
 prereqs()
 {
 	echo "$PREREQ"
 }
+
 case $1 in
 # get pre-requisites
 prereqs)
