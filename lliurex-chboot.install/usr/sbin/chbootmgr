@@ -131,6 +131,7 @@ main(){
 			else
 				error_msg "Invalid entry '$RAW_NAME'"
 			fi
+			enable_chboot_grub
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		disable-boot)
@@ -142,6 +143,7 @@ main(){
 			else
 				error_msg "Invalid entry '$RAW_NAME'"
 			fi
+			disable_chboot_grub
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 
@@ -205,6 +207,8 @@ if [ "\$chboot_enabled" = "yes" ]; then
 search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID
 ### ENTRIES ###
 ### FOOT ###
+set chboot_enabled=no
+save_env chboot_enabled
 fi
 EOF
 }
@@ -424,6 +428,17 @@ entry_set_default(){
 	sed -i "/^### FOOT ###/a set default=$1 " $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE
 	fix_perms_chboot_grub
 }
+
+enable_chboot_grub(){
+	[ -e /boot/grub/grubenv ] || grub-editenv - create
+	grub-editenv - set chboot_enabled=yes
+}
+
+disable_chboot_grub(){
+	[ -e /boot/grub/grubenv ] || grub-editenv - create
+	grub-editenv - set chboot_enabled=no
+}
+
 
 entry_del_default(){
 	awk '/^### FOOT ###/ { found=1 }
