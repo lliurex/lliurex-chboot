@@ -1,0 +1,21 @@
+#!/bin/bash
+
+BOOT_DIRECTORY="/chboot/lliurex-chboot/boot/"
+DISTRO_ID="lliurex25"
+ROOT_UUID="$(findmnt -no UUID /)"
+
+grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi/ --bootloader-id=$DISTRO_ID
+
+cat <<EOF> /chboot/lliurex-chboot/boot/grub/grub.cfg
+
+search.fs_uuid $ROOT_UUID root
+search.fs_label chboot chboot
+
+if [ -e (\$root)/boot/grub/grub.cfg ]; then
+	set prefix=(\$root)"/boot/grub"
+	configfile \$prefix/grub.cfg
+else
+	source (\$chboot)/lliurex-chboot/boot/chboot.cfg
+fi
+
+EOF
