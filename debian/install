@@ -1,1 +1,2 @@
 lliurex-chboot.install/* /
+grub/* /usr/share/lliurex-chboot/bin/
