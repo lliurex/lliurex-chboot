@@ -1,0 +1,10 @@
+[Unit]
+Description=ChBoot OneShot service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/lliurex-chboot prepare
+
+[Install]
+WantedBy=local-fs.target
+

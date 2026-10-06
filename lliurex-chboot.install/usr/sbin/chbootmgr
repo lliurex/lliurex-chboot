@@ -1,0 +1,464 @@
+#!/bin/bash
+
+#  Description:
+#
+# Simple tool to patch ubuntu/grub.cfg in EFI partition
+# to mitigate the hardcoded grub.cfg path in Ubuntu
+# Run the script with parameters to get help.
+#
+
+###############
+# global vars #
+###############
+FSTAB_FILE="/etc/fstab"
+BEGIN_SECTION="## BEGIN LLIUREX CHBOOT data ##"
+END_SECTION="## END LLIUREX CHBOOT data ##"
+CHBOOT_LABEL="chboot"
+CHBOOT_MOUNT="/chboot"
+CHBOOT_BASEDIR="/lliurex-chboot"
+CHBOOT_FS="ext4"
+CHBOOT_TAG="/etc/lliurex-auto-upgrade/tags/chboot"
+CHBOOT_UUID=""
+CHBOOT_PART=""
+
+CHBOOT_ENTRY_FILES="chboot.cfg"
+CHBOOT_ENTRY_DIRS="boot hooks"
+CHBOOT_ENTRY_HOOKS="install uninstall check prepare free_up mk_grub"
+
+CHBOOT_DEFAULT_NAME="lliurex"
+
+EFI_LLIUREX="lliurex-25 lliurex-23"
+EFI_UBUNTU="ubuntu"
+EFI_MOUNT="/boot/efi"
+EFI_BASE="EFI"
+EFI_PREFIX="chboot_"
+CHBOOT_USRDIR="/usr/share/lliurex-chboot/srcs"
+CHBOOT_ISODIR="$CHBOOT_BASEDIR/isos"
+CHBOOT_IMGDIR="$CHBOOT_BASEDIR/imgs"
+CHBOOT_SRCDIR="$CHBOOT_BASEDIR/srcs"
+CHBOOT_BOOTDIR="$CHBOOT_BASEDIR/boot"
+CHBOOT_SRCNAME=""
+CHBOOT_GRUB_FILE="$CHBOOT_BOOTDIR/chboot.cfg"
+CHBOOT_DIRS="$CHBOOT_ISODIR $CHBOOT_IMGDIR $CHBOOT_BOOTDIR $CHBOOT_SRCDIR"
+
+#############
+# functions #
+#############
+error_msg(){
+        TYPE="ERROR"
+        if [ "$#" -gt 1 ] ; then
+                TYPE="$1"
+                shift
+        fi
+        printf "${TYPE}: " >&2
+        while [ "$1" ] ; do
+                echo "$1" >&2
+                shift
+        done
+        echo "" >&2
+}
+
+die(){
+	error_msg "$@"
+        exit 1
+}
+
+usage(){
+	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
+	    "       $(basename "$0") show CHBOOT_ENTRY" \
+	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]"\
+	    "       $(basename "$0") enable-boot CHBOOT_ENTRY "\
+	    "       $(basename "$0") disable-boot CHBOOT_ENTRY "
+}
+
+main(){
+	[ "$1" ] || usage
+	ACTION="$1"
+	shift
+	case "$ACTION" in
+		configure)
+			if ! chboot_configure ; then
+				chboot_unconfigure
+				die "CHBOOT partition not configured, aborting ..."
+			fi
+			;;
+		unconfigure)
+			chboot_unconfigure
+			;;
+		mount)
+			chboot_mount -q
+			;;
+		umount)
+			chboot_umount
+			;;
+		list)
+			ALREADY_MOUNTED="$(chboot_mount)"
+			for RAW_NAME in $(chboot_list) ; do
+				entry_show_status "$RAW_NAME" | tr "\n" ">" |sed -e "s%>% -> %g"
+			done
+			echo 
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		show)
+			RAW_NAME="$1"
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_show_status "$RAW_NAME"
+				entry_show_field "$RAW_NAME" "Name"
+				entry_show_field "$RAW_NAME" "Description"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		prepare)
+			RAW_NAME="$1"
+			shift
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_prepare "$RAW_NAME" "$@"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		enable-boot)
+			RAW_NAME="$1"
+			shift
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_activate "$RAW_NAME"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			enable_chboot_grub
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		disable-boot)
+			RAW_NAME="$1"
+			shift
+			ALREADY_MOUNTED="$(chboot_mount)"
+			if entry_validate "$RAW_NAME" ; then
+				entry_deactivate "$RAW_NAME"
+			else
+				error_msg "Invalid entry '$RAW_NAME'"
+			fi
+			disable_chboot_grub
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+
+		*)
+			usage
+			;;
+	esac
+}
+
+chboot_test_partition(){
+	chboot_get_uuid >/dev/null 2>/dev/null || return 1
+	return 0
+}
+
+chboot_configure(){
+	if chboot_test_partition ; then
+		chboot_tag_set
+		mkdir -p $CHBOOT_MOUNT
+		ALREADY_MOUNTED="$(chboot_mount)"
+		chboot_test_mount || return 1
+		chboot_mkdirs || return 1
+		chboot_update_entries || return 1
+		chboot_configure_chboot_grub || return 1
+		[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+		return 0
+	fi
+	return 1
+}
+
+chboot_unconfigure(){
+	chboot_test_partition || chboot_tag_unset
+	chboot_umount
+	rmdir --ignore-fail-on-non-empty $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
+}
+
+chboot_configure_chboot_grub(){
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	if [ ! -e $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE ]; then
+		chboot_initialize_main_grub
+	else
+		chboot_test_main_grub || chboot_initialize_main_grub
+	fi
+	fix_perms_chboot_grub
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+
+}
+
+chboot_test_main_grub(){
+	grep -q "### HEAD ###"  $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE || return 1
+	grep -q "### ENTRIES ###"  $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE || return 1
+	grep -q "### FOOT ###"  $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE || return 1
+	return 0
+}
+
+chboot_initialize_main_grub(){
+	cat > $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE <<EOF
+### HEAD ###
+load_env
+if [ "\$chboot_enabled" = "yes" ]; then
+search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID
+### ENTRIES ###
+### FOOT ###
+set chboot_enabled=no
+save_env chboot_enabled
+fi
+EOF
+}
+
+
+chboot_del_entry(){
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_ENTRY="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$1"
+	rm -fr "$CHBOOT_ENTRY"
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+chboot_list(){
+	for d in $(ls -1 $CHBOOT_MOUNT/lliurex-chboot/srcs) ; do
+		echo "$d"
+	done
+}
+
+chboot_update_entries(){
+	for d in $(ls -1 $CHBOOT_USRDIR) ; do
+		if entry_validate "$d" "$CHBOOT_USRDIR" ; then
+			D="$CHBOOT_USRDIR/$d"
+			chboot_del_entry "$d"
+			cp -r "$D"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$d/boot"
+			mkdir -p "$GRUB_DIR"
+			entry_run_hook "$d" mk_grub > $GRUB_DIR/grub.cfg
+		fi
+	done
+}
+
+chboot_mkdirs(){
+	for d in $CHBOOT_DIRS ; do
+		mkdir -p "$CHBOOT_MOUNT/$d"
+	done
+	return 0
+}
+
+chboot_tag_set(){
+	touch "$CHBOOT_TAG"
+}
+
+chboot_tag_unset(){
+	rm -f "$CHBOOT_TAG"
+}
+
+chboot_umount(){
+	# do lazy umount 
+	# umount -l $CHBOOT_MOUNT >/dev/null 2>/dev/null || true
+	systemctl stop chboot.mount
+}
+
+
+chboot_update_vars(){
+	CHBOOT_SRCNAME="$1"
+        CHBOOT_UUID="$(chboot_get_uuid)"
+	CHBOOT_PART="$(chboot_get_part)"
+	CHBOOT_BOOTDIR="$CHBOOT_SRCDIR/$CHBOOT_SRCNAME/boot"
+}
+
+chboot_get_uuid(){
+	# chboot partition MUST HAVE chboot label
+	# alternative: blkid -s LABEL
+	CHBOOT_UUID="$(lsblk -plo LABEL,NAME,UUID |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
+	[ "$CHBOOT_UUID" ] || return 1
+	#die "CHBOOT partition not found, aborting ..."
+	echo "$CHBOOT_UUID"
+	return 0
+}
+
+chboot_get_part(){
+	# chboot partition MUST HAVE chboot label
+	CHBOOT_PART="$(lsblk -plo LABEL,NAME |tr -s "[[:blank:]]" |sed -ne "/^$CHBOOT_LABEL\s/{s%^.*\s%%;p}")"
+	[ "$CHBOOT_PART" ] || return 1
+	echo "$CHBOOT_PART"
+	return 0
+}
+
+chboot_test_mount(){
+	if df --output=target,source $CHBOOT_MOUNT |grep -q "^$CHBOOT_MOUNT" ; then
+		return 0
+	fi
+	return 1
+}
+
+chboot_mount(){
+	if chboot_test_mount ; then
+		[ "$1" = "-q" ] || echo "Y"
+		return 0
+	fi
+	[ "$1" = "-q" ] || echo "N"
+	systemctl start chboot.mount
+	if chboot_test_mount ; then
+		return 0
+	fi
+	return 1
+}
+
+entry_show_status(){
+	ENTRY_NAME="$1"
+	echo "Entry: $ENTRY_NAME"
+	ENTRY_STATUS="OK. Ready to use"
+	if entry_check_status "$ENTRY_NAME" >/dev/null 2>/dev/null ; then
+		ENTRY_STATUS="*NOT READY* (run 'chbootmgr prepare $ENTRY_NAME' to fix"
+	fi
+	echo "Status: $ENTRY_STATUS"
+}
+
+entry_show_field(){
+	ENTRY_NAME="$1"
+	FIELD_NAME="$2"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	#CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
+	CFG_FILE="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/chboot.cfg"
+	echo "$FIELD_NAME:"
+	sed -ne "/^$FIELD_NAME:/,\${s%^$FIELD_NAME:\s*% %;/^[^[:blank:]]/,\$d;p}" "$CFG_FILE" |while read l; do
+		eval echo "\" $l\""
+	done
+	
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+entry_run_hook(){
+	ENTRY_NAME="$1"
+	SCRIPT_NAME="$2"
+	SCRIPT="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/hooks/$SCRIPT_NAME"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	shift 2
+	if [ -x "$SCRIPT" ] ; then
+		chboot_update_vars "$ENTRY_NAME"
+		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR CHBOOT_SRCNAME 
+		rc=0
+		$SCRIPT $@|| rc=$?
+		return $rc
+	else
+		rc=1
+	fi
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	return $rc
+}
+
+entry_validate(){
+	RAW_NAME="$1"
+	[ "$RAW_NAME" ] || return 1
+	RAW_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+	shift
+	[ -z "$1" ] || 	RAW_DIR="$1"
+	ENTRY_DIR="$RAW_DIR/$RAW_NAME"
+	[ -d "$ENTRY_DIR" ] || return 1
+	for f in $CHBOOT_ENTRY_FILES ; do
+		[ -r "$ENTRY_DIR/$f" ] || return 1
+	done
+	for f in $CHBOOT_ENTRY_DIRS ; do
+		[ -d "$ENTRY_DIR/$f" ] || return 1
+	done
+	for f in $CHBOOT_ENTRY_HOOKS ; do
+		[ -x "$ENTRY_DIR/hooks/$f" ] || return 1
+	done
+	return 0
+}
+
+
+entry_check_status(){
+	RAW_NAME="$1"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	rc=1
+	if entry_validate "$RAW_NAME" ; then
+		rc=0
+		entry_run_hook "$RAW_NAME" check "$CHBOOT_PATH" || rc=$?
+	fi
+
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	return $rc
+}
+
+entry_prepare(){
+	RAW_NAME="$1"
+	shift
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+entry_deactivate(){
+	RAW_NAME="$1"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	CHBOOT_PATH="$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	sed -i "/^### ENTRIES ###/,/^### FOOT ###/{/^source.*$RAW_NAME/d}" $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE 
+	fix_perms_chboot_grub
+	entry_del_default
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+}
+
+entry_activate(){
+	RAW_NAME="$1"
+	ALREADY_MOUNTED="$(chboot_mount)"
+	chboot_test_mount || return 1
+	entry_deactivate "$RAW_NAME"
+	# assume check_status OK
+	CHBOOT_PATH="$CHBOOT_SRCDIR/$RAW_NAME/boot"
+	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_MOUNT$CHBOOT_PATH/grub.cfg" 
+	sed -i "/^### ENTRIES ###/a source (\$chboot)$CHBOOT_PATH/grub.cfg" $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE
+	fix_perms_chboot_grub
+	entry_set_default $RAW_NAME
+	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+	return $rc
+}
+
+entry_set_default(){
+	sed -i "/^### FOOT ###/a set default=$1 " $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE
+	fix_perms_chboot_grub
+}
+
+enable_chboot_grub(){
+	[ -e /boot/grub/grubenv ] || grub-editenv - create
+	grub-editenv - set chboot_enabled=yes
+}
+
+disable_chboot_grub(){
+	[ -e /boot/grub/grubenv ] || grub-editenv - create
+	grub-editenv - set chboot_enabled=no
+}
+
+
+entry_del_default(){
+	awk '/^### FOOT ###/ { found=1 }
+	found && /^set default/ { next }
+	{ print }
+	' $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE >  /tmp/temp_grub
+	mv /tmp/temp_grub $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE 
+	fix_perms_chboot_grub
+}
+
+fix_perms_chboot_grub(){
+	[ -e $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE ] || return 0
+	chmod 600  $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE
+	chown root:root $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE 
+}
+
+################
+# main program #
+################
+main "$@"
+exit 0
+
+

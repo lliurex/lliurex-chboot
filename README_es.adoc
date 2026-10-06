@@ -1,0 +1,167 @@
+# Lliurex chboot
+Luis Garcia
+Translated with https://linnk.ai/tools/markdown-translator/
+:compat-mode:
+:toc:
+:icons: font
+:toc-title: Índice
+:toclevels: 3
+:doctype: article
+:experimental:
+:icons: font
+:sectanchors:
+:sectlinks:
+:sectnums:
+:imagesdir: ./images
+
+## Contexto
+Desde las primeras versiones de LliureX, los modelos de aula, centro y centro inteligente incluían herramientas de gestión, actualización y configuración para los ordenadores del centro que han sido ampliamente utilizadas por los técnicos de soporte (SAI), los coordinadores TIC y otro personal con responsabilidades de gestión para los ordenadores de los centros.
+Estas utilidades también podían utilizarse de forma centralizada desde los servidores del centro. Estas aplicaciones hacían uso de características como los servicios de configuración y arranque en red (DHCP, DNS, PXE) que se gestionaban directamente en los servidores LliureX del centro.
+
+Tras el lanzamiento de lliurex23, se ha introducido una visión mucho más corporativa de la estación de trabajo de los centros educativos.
+Los principales objetivos de este nuevo modelo son aumentar la seguridad y facilitar una gestión centralizada de la infraestructura informática.
+Para lograr estos objetivos, se han producido importantes transformaciones en la infraestructura informática de todos los centros educativos de la Comunidad Valenciana. Estos cambios afectan a la arquitectura y las características de las redes y las comunicaciones, así como a los detalles de configuración de los equipos informáticos.
+
+Los modelos de gestión de LliureX se diseñaron en un contexto anterior que era muy diferente del paradigma actual de la infraestructura informática.
+En particular, las capacidades de arranque en red (para realizar operaciones en red como la clonación de ordenadores o la instalación) se han reducido drásticamente y ya no son viables en la práctica como consecuencia de la gestión centralizada de DHCP y DNS desde la DGTIC (lo que imposibilita la configuración de parámetros de red ad hoc desde los ordenadores LLiureX).
+Para empeorar las cosas, la configuración de seguridad del ordenador (SecureBoot, contraseña de la BIOS...) dificulta no sólo el arranque desde la red, sino también desde cualquier medio extraíble, lo que hace que la reinstalación o actualización del equipo sea una misión realmente imposible.
+
+LliureX chboot intenta mitigar las limitaciones del arranque en red, y proporciona un entorno alternativo que puede ser utilizado para instalar, actualizar o clonar ordenadores LliureX desde imágenes o medios de instalación. Los casos de uso van desde la instalación de ordenadores individuales hasta la ejecución de despliegues masivos con herramientas como clonezilla o LliureX open-sysclone.
+
+## Visión general
+Lliurex chboot responde a LliureX ch(ange) boot, e incluye un conjunto de herramientas para configurar modos de arranque alternativos para los ordenadores LliureX.
+
+La idea (simple) y principal es utilizar una segunda partición del disco duro (etiquetada como `chboot`) para arrancar un sistema alternativo, evitando la necesidad de configurar los ordenadores para que arranquen desde la red o desde un medio extraíble para realizar operaciones como:
+
+* instalación de una nueva versión del sistema operativo
+* reinstalación desde una imagen de disco de recuperación
+
+LliureX chboot puede ejecutarse en un único ordenador aislado de la red, pero en combinación con otras herramientas de LliureX, también puede utilizarse en entornos de laboratorios informáticos para distribuir configuraciones e imágenes de disco para realizar despliegues masivos (desde una dirección IP conocida de antemano).
+
+Las configuraciones incluidas, permiten diferentes modos de arranque:
+
+- instancia de clonezilla auto (y desatendida) para restaurar la imagen del disco desde la partición chboot
+- instancia de clonezilla auto (y desatendida) para restaurar desde la red en un entorno de laboratorio informático LliureX
+- servidor clonezilla automatizado para despliegues masivos
+- ejecutar la imagen de clonezilla en modo interactivo
+- ejecutar la imagen de instalación interactiva de LliureX
+
+## Detalles del procedimiento de arranque
+Para configurar las opciones de arranque alternativas, LliureX chboot depende de ***UEFI Boot Manager y grub***.
+
+image::chboot-boot.svg[]
+
+Cuando se crea una nueva entrada de arranque, chboot genera:
+
+- Una ***entrada de arranque UEFI***.
+
+> Esta entrada está disponible para el Administrador de Arranque UEFI, pero chboot ***no la incluye en el orden de arranque*** sino que establece la variable `NVRAM` `UEFI BootNext` y (opcionalmente) activa un reinicio del sistema.
+
+- La ***carpeta de directorio asociada en la partición del sistema EFI*** para lanzar grub
+
+> Al crear este directorio, chboot escanea la partición EFI actual y busca las carpetas `EFI/lliurex-25/`, `EFI/lliurex-23/` o `EFI/ubuntu/` (en ese orden) y utiliza la primera coincidencia como plantilla para copiar los archivos para la nueva entrada. El archivo `grub.cfg` se reescribe para proporcionar una configuración de prefijo grub apropiada para la nueva entrada de arranque.
+
+- Un ***directorio de arranque grub en la partición chboot*** con los archivos de arranque y la configuración de grub necesarios
+
+LliureX chboot utiliza exactamente el mismo nombre para la carpeta EFI y la entrada de arranque UEFI. Estos nombres tienen el prefijo `chboot_`. En este momento, chboot gestiona sólo una entrada de arranque con un nombre fijo (`chboot_lliurex`) independientemente del nombre específico de la imagen a arrancar. Esta estrategia evita la proliferación de entradas innecesarias en el Administrador de Arranque UEFI.
+Sin embargo, en la partición chboot, no se utiliza ningún prefijo para los nombres de los directorios de las diferentes entradas, y cada uno tiene su propio directorio "boot" dentro de su subdirectorio.
+La entrada de arranque UEFI carga el archivo `shimx64.efi` para proporcionar compatibilidad con las configuraciones de Secure Boot.
+
+## La partición de disco chboot
+LliureX chboot requiere una partición de disco dedicada. El tamaño de la partición debe establecerse de acuerdo con las imágenes de disco o los archivos iso que desee utilizar. El tamaño por defecto al ejecutar el instalador de lliureX en modo OEM es de 12 GB, suficiente para alojar una imagen ISO de Clonezilla y el instalador de LliureX al mismo tiempo.
+
+LliureX chboot requiere el uso de una etiqueta de disco específica (`chboot`) para identificar correctamente la partición chboot. La partición del disco duro debe ser etiquetada usando e2label, tune2fs o utilidades de disco alternativas. Para asegurar la operación, la etiqueta `chboot` debe mostrarse correctamente al usar los comandos `blkid` o `lsblk`, y la partición del disco debe ser accesible bajo la ruta `/dev/disk/by-label/chboot`.
+
+El sistema de archivos por defecto para la partición chboot es `ext4`, pero se podría utilizar cualquier otro sistema de archivos soportado por `grub`.
+
+LliureX chboot proporciona la configuración `systemd mount` apropiada para acceder a la partición chboot bajo el punto de montaje `/chboot`, por lo que no debe añadirse al archivo `fstab`.
+
+## Estructura de directorios de chboot
+LliureX chboot crea la siguiente estructura de directorios, donde `/chboot` es el punto de montaje de la partición:
+```
+/chboot
+└── lliurex-chboot
+    ├── imgs
+    ├── isos
+    └── srcs
+        ├── ENTRY_FOLDER_1
+        ...
+        └── ENTRY_FOLDER_n
+```
+
+- `lliurex-chboot`: Directorio base para todo lo relacionado con LliureX chboot.
+  - `lliurex-chboot/imgs`: directorio de imágenes de clonezilla
+  - `lliurex-chboot/isos`: directorio para archivos iso de arranque
+  - `lliurex-chboot/srcs`: configuraciones de arranque (fuente) de chboot
+
+## Entradas chboot (o configuraciones de origen)
+Una entrada chboot (también conocida como configuración de origen) es una carpeta de directorio que contiene toda la información necesaria para configurar una opción de arranque alternativa. La herramienta `chbootmgr` busca entradas en la carpeta lliurex-chboot/srcs.
+
+> NOTA: La partición chboot no se monta automáticamente al inicio, por lo que para instalar entradas chboot desde un paquete Debian, no es seguro intentar dejar caer los archivos directamente en `/chboot`. La forma correcta es ponerlos en otra ruta y usar `chbootmgr install` en `postinstall` u otros scripts de mantenimiento.
+
+Este es un ejemplo del árbol de entradas chboot:
+```
+/chboot
+└── lliurex-chboot
+    └── srcs
+        ├── ENTRY_FOLDER1
+        │   ├── chboot.cfg
+        │   ├── boot
+        │   └── hooks
+        │       ├── install
+        │       ├── uninstall
+        │       ├── check
+        │       ├── prepare
+        │       ├── free_up
+        │       └── mk_grub
+        ├── ENTRY_FOLDER2
+            .....
+```
+
+Las entradas Chboot son gestionadas por la herramienta chbootmgr. La siguiente figura resume las opciones más importantes.
+
+image::chboot-entry-life-cyle.svg[]
+
+### Archivos y carpetas obligatorios para cada configuración de origen ###
+
+- `chboot.cfg` (archivo): Incluye la descripción y otra información sobre la entrada. La estructura y la sintaxis del archivo son similares a los archivos `debian/control`.
+- `boot` (dir): Este directorio debe incluir todos los archivos necesarios para arrancar la entrada, como la carpeta /boot/grub de un sistema linux estándar (ej. vmlinuz, initrd, archivos squashfs, configuraciones ...). Cuando la entrada chboot se activa, chboot crea una configuración grub en la partición EFI que espera un archivo `grub.cfg` en esta carpeta.
+- `hooks` (dir): La carpeta hooks debe incluir los siguientes ejecutables:
+  - `install`: El script es un script "oneshot", y se llama sólo una vez, sólo para copiar/instalar la entrada en la partición chboot la primera vez. Recibe la ruta completa del directorio boot como primer argumento (`/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot`). El estado de salida del script se ignora silenciosamente.
+  - `uninstall`: Se llama antes de la eliminación de la entrada chboot.
+  - `check`: LliureX chboot ejecuta este script para asegurar que la configuración de origen está lista para usar y puede ser iniciada. Es sólo un script de prueba para comprobar la presencia de los archivos y configuraciones requeridos sin tratar de arreglar nada. El script recibe la ruta completa de su directorio boot (`/chboot/lliurex-chboot/srcs/ENTRY_FOLDER/boot`) como primer argumento. Un estado de salida distinto de cero indica que la entrada no está lista, y la salida estándar se muestra como una explicación del problema.
+  - `prepare`: El uso previsto de este script es descargar/instalar/generar ***TODOS*** los archivos necesarios para preparar la entrada chboot para el arranque (excepto el archivo grub.cfg, que se crea más tarde ejecutando `mk-grub`). Como en el caso anterior, el primer argumento del script es la ruta completa de su directorio boot, pero puede utilizar cualquier tipo de argumentos adicionales arbitrarios. El estado de salida y la salida estándar de este script se muestran al usuario después de la ejecución, pero el estado de preparación de la entrada chboot se determina por el resultado de la ejecución del script `check`.
+  - `free_up`: Este script no es ejecutado automáticamente por chboot para gestionar las entradas, pero puede ser invocado por el usuario para reducir el uso del espacio en disco (ej. para borrar isos descargados o archivos de imagen). Podría considerarse como lo opuesto al script de configuración.
+  - `mk_grub`: La salida estándar de este script se utiliza para generar el archivo grub.cfg en la partición chboot. Funciona de forma similar a los scripts en /etc/grub.d/.
+
+### parámetros y variables de entorno para la ejecución del script chboot
+Todos los scripts hook tienen acceso a las siguientes variables de entorno:
+
+#### Rutas del sistema
+- `CHBOOT_MOUNT`: punto de montaje para la partición chboot (por defecto `/chboot`). El resto de las variables de entorno son relativas a este punto de montaje para reflejar las rutas dentro de la partición chboot.
+
+#### Rutas relativas a la partición Chboot
+- `CHBOOT_BASEDIR`: directorio base para todo lo relacionado con chboot (por defecto `/lliurex-chboot`)
+- `CHBOOT_ISODIR` : carpeta de archivos iso (por defecto `$CHBOOT_BASEDIR/isos`)
+- `CHBOOT_IMGDIR` : directorio para almacenar imágenes de clonezilla (por defecto `$CHBOOT_BASEDIR/imgs`)
+- `CHBOOT_SRCDIR` : directorio base de las configuraciones de origen de chboot (por defecto `$CHBOOT_BASEDIR/srcs`)
+- `CHBOOT_BOOTDIR`: este directorio alberga el directorio de arranque grub para las fuentes chboot, como la carpeta `/boot` en un sistema linux estándar (por defecto `$CHBOOT_BASEDIR/boot`)
+
+#### Información de la partición Chboot
+- `CHBOOT_UUID`: `UUID` de la partición chboot
+- `CHBOOT_PART`: dispositivo de partición de disco chboot
+
+## chbootmgr
+Esta es la herramienta de gestión para chboot. La sintaxis y las opciones disponibles son:
+
+```
+Usage: chbootmgr {configure|unconfigure|mount|umount|list}
+       chbootmgr show CHBOOT_ENTRY
+       chbootmgr prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]
+       chbootmgr boot-next CHBOOT_ENTRY
+       chbootmgr boot [+SECONDS] CHBOOT_ENTRY
+```
+
+## Paquetes binarios
+* **lliurex-chboot**
+
