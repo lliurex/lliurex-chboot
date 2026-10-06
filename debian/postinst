@@ -20,7 +20,7 @@ set -e
 
 case "$1" in
     configure)
-	    chbootmng configure
+	    chbootmgr configure
 	    /usr/share/lliurex-chboot/bin/fix_efi_grub
 	    update-grub
     ;;
