@@ -21,6 +21,7 @@ set -e
 case "$1" in
     configure)
 	    /usr/share/lliurex-chboot/bin/fix_efi_grub
+	    update-grub
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
