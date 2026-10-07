@@ -2,5 +2,6 @@
 %:
 	dh $@
 
-override_dh_installsystemd:
-	dh_installsystemd --name=chboot
+override_dh_systemd_enable:
+	dh_installinit --name=chboot debian/lliurex-chboot.chboot.mount
+	dh_systemd_enable --name=chboot debian/lliurex-chboot.chboot.mount
