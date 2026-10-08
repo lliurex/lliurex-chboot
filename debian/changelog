@@ -1,3 +1,9 @@
+lliurex-chboot (1.2.1) jammy; urgency=medium
+
+  * Run grub_fix before mount chboot partition
+
+ -- Raul Rodrigo Segura <raurodse@gmail.com> Thu, 08 Oct 2026 12:33:58 +0200
+
 lliurex-chboot (1.2) jammy; urgency=medium
 
   * Force install grub always
