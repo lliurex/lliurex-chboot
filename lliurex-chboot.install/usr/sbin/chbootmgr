@@ -131,6 +131,7 @@ main(){
 			else
 				error_msg "Invalid entry '$RAW_NAME'"
 			fi
+			/usr/share/lliurex-chboot/bin/fix_efi_grub
 			enable_chboot_grub
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;

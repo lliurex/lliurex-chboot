@@ -1,7 +1,6 @@
 #!/bin/bash
 
 BOOT_DIRECTORY="/chboot/lliurex-chboot/boot/"
-DISTRO_ID="lliurex25"
 ROOT_UUID="$(findmnt -no UUID /)"
  
 if [ ! -d $BOOT_DIRECTORY ]; then
@@ -10,7 +9,7 @@ fi
 
 
 if [ ! -e "$BOOT_DIRECTORY/grub" ]; then
-	grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi/ --bootloader-id=$DISTRO_ID
+	grub-install --boot-directory=$BOOT_DIRECTORY 
 fi
 
 cat <<EOF> /chboot/lliurex-chboot/boot/grub/grub.cfg
@@ -26,3 +25,4 @@ else
 fi
 
 EOF
+update-grub
