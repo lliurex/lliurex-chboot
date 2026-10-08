@@ -1,3 +1,9 @@
+lliurex-chboot (1.1) noble; urgency=medium
+
+  * First version on Noble 
+
+ -- Raul Rodrigo Segura <raurodse@gmail.com>  Thu, 08 Oct 2026 11:47:25 +0200
+
 lliurex-chboot (1.0) jammy; urgency=medium
 
   * First version on jammy 
