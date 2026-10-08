@@ -8,9 +8,8 @@ if [ ! -d $BOOT_DIRECTORY ]; then
 fi
 
 
-if [ ! -e "$BOOT_DIRECTORY/grub" ]; then
-	grub-install --boot-directory=$BOOT_DIRECTORY 
-fi
+grub-install --boot-directory=$BOOT_DIRECTORY 
+update-grub
 
 cat <<EOF> /chboot/lliurex-chboot/boot/grub/grub.cfg
 
@@ -25,4 +24,3 @@ else
 fi
 
 EOF
-update-grub
