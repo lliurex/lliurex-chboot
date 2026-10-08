@@ -1,3 +1,9 @@
+lliurex-chboot (1.2) noble; urgency=medium
+
+  * Force grub install always 
+
+ -- Raul Rodrigo Segura <raurodse@gmail.com> Thu, 08 Oct 2026 12:23:38 +0200
+
 lliurex-chboot (1.1) noble; urgency=medium
 
   * First version on Noble 
