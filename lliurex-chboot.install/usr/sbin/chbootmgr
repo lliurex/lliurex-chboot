@@ -204,7 +204,7 @@ chboot_initialize_main_grub(){
 	cat > $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE <<EOF
 ### HEAD ###
 load_env
-if [ "\$chboot_enabled" = "yes" ]; then
+if [ "\$chboot_enabled" = "yes" -o "\$forcechboot"="yes" ]; then
 search --no-floppy --fs-uuid --set=chboot $CHBOOT_UUID
 ### ENTRIES ###
 ### FOOT ###

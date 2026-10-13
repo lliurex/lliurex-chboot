@@ -20,6 +20,7 @@ if [ -e (\$root)/boot/grub/grub.cfg ]; then
 	set prefix=(\$root)"/boot/grub"
 	configfile \$prefix/grub.cfg
 else
+	set forcechboot="yes"
 	source (\$chboot)/lliurex-chboot/boot/chboot.cfg
 fi
 
