@@ -27,11 +27,6 @@ CHBOOT_ENTRY_HOOKS="install uninstall check prepare free_up mk_grub"
 
 CHBOOT_DEFAULT_NAME="lliurex"
 
-EFI_LLIUREX="lliurex-25 lliurex-23"
-EFI_UBUNTU="ubuntu"
-EFI_MOUNT="/boot/efi"
-EFI_BASE="EFI"
-EFI_PREFIX="chboot_"
 CHBOOT_USRDIR="/usr/share/lliurex-chboot/srcs"
 CHBOOT_ISODIR="$CHBOOT_BASEDIR/isos"
 CHBOOT_IMGDIR="$CHBOOT_BASEDIR/imgs"
@@ -93,6 +88,9 @@ main(){
 			;;
 		list)
 			ALREADY_MOUNTED="$(chboot_mount)"
+			for RAW_NAME in $(ls -1 $CHBOOT_USRDIR); do
+				echo $(chboot_list) | grep -q $RAW_NAME || echo -e "$RAW_NAME is not installed. Execute chbootmgr install $RAW_NAME"
+			done
 			for RAW_NAME in $(chboot_list) ; do
 				entry_show_status "$RAW_NAME" | tr "\n" ">" |sed -e "s%>% -> %g"
 			done
