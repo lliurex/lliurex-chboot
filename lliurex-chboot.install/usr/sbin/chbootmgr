@@ -91,7 +91,7 @@ main(){
 			RAW_NAME="$1"
 			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
-			chboot_install $RAW_NAME
+			chboot_install $RAW_NAME $@
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		list)
@@ -171,9 +171,10 @@ chboot_test_partition(){
 # @return: 0 exit; 1 fail
 chboot_install(){
 	RAW_NAME="$1"
+	shift
 	entry_validate $RAW_NAME $CHBOOT_USRDIR || return 1
 	chboot_copy_entry_src $RAW_NAME
-	entry_run_hook $RAW_NAME install
+	entry_run_hook $RAW_NAME install $@
 
 }
 
