@@ -441,9 +441,9 @@ entry_prepare(){
 	shift
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
-	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
-	entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
-	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_MOUNT$CHBOOT_PATH/grub.cfg" 
+	CHBOOT_ENTRY_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME"
+	entry_run_hook "$RAW_NAME" prepare "$CHBOOT_ENTRY_PATH" "$@"
+	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_ENTRY_PATH/boot/grub.cfg" 
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
