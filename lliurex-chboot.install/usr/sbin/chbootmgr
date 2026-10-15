@@ -27,11 +27,6 @@ CHBOOT_ENTRY_HOOKS="install uninstall check prepare free_up mk_grub"
 
 CHBOOT_DEFAULT_NAME="lliurex"
 
-EFI_LLIUREX="lliurex-25 lliurex-23"
-EFI_UBUNTU="ubuntu"
-EFI_MOUNT="/boot/efi"
-EFI_BASE="EFI"
-EFI_PREFIX="chboot_"
 CHBOOT_USRDIR="/usr/share/lliurex-chboot/srcs"
 CHBOOT_ISODIR="$CHBOOT_BASEDIR/isos"
 CHBOOT_IMGDIR="$CHBOOT_BASEDIR/imgs"
@@ -66,6 +61,7 @@ die(){
 usage(){
 	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
 	    "       $(basename "$0") show CHBOOT_ENTRY" \
+	    "       $(basename "$0") install CHBOOT_ENTRY" \
 	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]"\
 	    "       $(basename "$0") enable-boot CHBOOT_ENTRY "\
 	    "       $(basename "$0") disable-boot CHBOOT_ENTRY "
@@ -91,8 +87,18 @@ main(){
 		umount)
 			chboot_umount
 			;;
+		install)
+			RAW_NAME="$1"
+			shift
+			ALREADY_MOUNTED="$(chboot_mount)"
+			chboot_install $RAW_NAME
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
 		list)
 			ALREADY_MOUNTED="$(chboot_mount)"
+			for RAW_NAME in $(ls -1 $CHBOOT_USRDIR); do
+				echo $(chboot_list) | grep -q $RAW_NAME || echo -e "$RAW_NAME is not installed. Execute \"chbootmgr install $RAW_NAME\""
+			done
 			for RAW_NAME in $(chboot_list) ; do
 				entry_show_status "$RAW_NAME" | tr "\n" ">" |sed -e "s%>% -> %g"
 			done
@@ -157,6 +163,18 @@ main(){
 chboot_test_partition(){
 	chboot_get_uuid >/dev/null 2>/dev/null || return 1
 	return 0
+}
+
+# @description: copy needed files from /usr/share/lliurex-chboot/srcs to chboot partition and run configure hook
+# @param $1:	entry identifier
+# @side-effects: Copy 
+# @return: 0 exit; 1 fail
+chboot_install(){
+	RAW_NAME="$1"
+	entry_validate $RAW_NAME $CHBOOT_USRDIR || return 1
+	chboot_copy_entry_src $RAW_NAME
+	entry_run_hook $RAW_NAME install
+
 }
 
 chboot_configure(){
@@ -229,19 +247,34 @@ chboot_list(){
 	done
 }
 
+# @description: copy all entries files to chboot partition and run mk_grub hook
+# @side-effects: sync files from /usr/share/lliurex-chboot to /chboot partition
+# @return: 0
 chboot_update_entries(){
-	for d in $(ls -1 $CHBOOT_USRDIR) ; do
-		if entry_validate "$d" "$CHBOOT_USRDIR" ; then
-			D="$CHBOOT_USRDIR/$d"
-			chboot_del_entry "$d"
-			cp -r "$D"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
-			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$d/boot"
+	for ENTRY_IDENTIFIER in $(ls -1 $CHBOOT_USRDIR) ; do
+		if entry_validate "$ENTRY_IDENTIFIER" "$CHBOOT_USRDIR" ; then
+			chboot_copy_entry_src $ENTRY_IDENTIFIER
+			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_IDENTIFIER/boot"
 			mkdir -p "$GRUB_DIR"
 			entry_run_hook "$d" mk_grub > $GRUB_DIR/grub.cfg
 		fi
 	done
 }
 
+# @description: copy entry files to chboot partition
+# @param $1: entry identifier
+# @return: 0
+chboot_copy_entry_src(){
+	ENTRY_ID="$1"
+	ORIGIN_FOLDER="$CHBOOT_USRDIR/$ENTRY_ID"
+	chboot_del_entry "$ENTRY_ID"
+	cp -r "$ORIGIN_FOLDER"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+}
+
+
+# @description: make needed folders
+# @side-effects: Modify chboot folder
+# @return: 0
 chboot_mkdirs(){
 	for d in $CHBOOT_DIRS ; do
 		mkdir -p "$CHBOOT_MOUNT/$d"
@@ -334,6 +367,14 @@ entry_show_field(){
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
+
+
+# @description: Execute specific entry hook 
+# @param $1: Entry id
+# @param $2: hook name ( install, uninstall, check, prepare, ...)
+# @paral $3...: optional arguments for running hook
+# @return: 0 exit; 1 fail
+# @example: entry_run_hook llx25 install
 entry_run_hook(){
 	ENTRY_NAME="$1"
 	SCRIPT_NAME="$2"
@@ -353,6 +394,12 @@ entry_run_hook(){
 	return $rc
 }
 
+
+# @description: Check if entry has needed files, and folders
+# @param $1: Entry identifier
+# @param $2: Custom folder for check entries (optional)
+# @return: 0 exit ; 1 fail
+# @example: entry_validate llx25 /usr/share/lliurex-chboot/srcs
 entry_validate(){
 	RAW_NAME="$1"
 	[ "$RAW_NAME" ] || return 1
@@ -396,6 +443,7 @@ entry_prepare(){
 	chboot_test_mount || return 1
 	CHBOOT_PATH="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$RAW_NAME/boot"
 	entry_run_hook "$RAW_NAME" prepare "$CHBOOT_PATH" "$@"
+	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_MOUNT$CHBOOT_PATH/grub.cfg" 
 	[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 }
 
@@ -417,7 +465,6 @@ entry_activate(){
 	entry_deactivate "$RAW_NAME"
 	# assume check_status OK
 	CHBOOT_PATH="$CHBOOT_SRCDIR/$RAW_NAME/boot"
-	entry_run_hook "$RAW_NAME" mk_grub > "$CHBOOT_MOUNT$CHBOOT_PATH/grub.cfg" 
 	sed -i "/^### ENTRIES ###/a source (\$chboot)$CHBOOT_PATH/grub.cfg" $CHBOOT_MOUNT/$CHBOOT_GRUB_FILE
 	fix_perms_chboot_grub
 	entry_set_default $RAW_NAME
