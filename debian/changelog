@@ -1,3 +1,9 @@
+lliurex-chboot (1.6) jammy; urgency=medium
+
+  * Install action now support extra params 
+
+ -- Raul Rodrigo Segura <raurodse@gmail.com>  Thu, 15 Oct 2026 14:25:09 +0200
+
 lliurex-chboot (1.5) jammy; urgency=medium
 
   * compy with the documentation 
