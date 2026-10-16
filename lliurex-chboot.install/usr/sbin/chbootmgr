@@ -61,7 +61,7 @@ die(){
 usage(){
 	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
 	    "       $(basename "$0") show CHBOOT_ENTRY" \
-	    "       $(basename "$0") install CHBOOT_ENTRY" \
+	    "       $(basename "$0") install CHBOOT_ENTRY [INSTALL OPTIONAL PARAMETERS ...]" \
 	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]"\
 	    "       $(basename "$0") enable-boot CHBOOT_ENTRY "\
 	    "       $(basename "$0") disable-boot CHBOOT_ENTRY "
