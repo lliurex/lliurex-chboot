@@ -165,6 +165,19 @@ chboot_test_partition(){
 	return 0
 }
 
+# @description: copy needed files from /usr/share/lliurex-chboot/srcs or custom origin
+# @param $1:	entry identifier
+# @side-effects: Copy 
+# @return: 0 exit; 1 fail
+chboot_copy_entry(){
+	RAW_NAME="$1"
+	SRC_DIR="CHBOOT_USRDIR/$RAW_NAME"
+	shift
+	[ -z "$1" ] || SRC_DIR="$1"
+	entry_validate $RAW_NAME "$SRC_DIR" || return 1
+	chboot_copy_entry_src $RAW_NAME
+}
+
 # @description: copy needed files from /usr/share/lliurex-chboot/srcs to chboot partition and run configure hook
 # @param $1:	entry identifier
 # @side-effects: Copy 
@@ -172,9 +185,9 @@ chboot_test_partition(){
 chboot_install(){
 	RAW_NAME="$1"
 	shift
-	entry_validate $RAW_NAME $CHBOOT_USRDIR || return 1
+	entry_validate $RAW_NAME "$CHBOOT_USRDIR/$RAW_NAME" || return 1
 	chboot_copy_entry_src $RAW_NAME
-	entry_run_hook $RAW_NAME install $@
+	entry_run_hook $RAW_NAME install "$@"
 
 }
 
@@ -253,7 +266,7 @@ chboot_list(){
 # @return: 0
 chboot_update_entries(){
 	for ENTRY_IDENTIFIER in $(ls -1 $CHBOOT_USRDIR) ; do
-		if entry_validate "$ENTRY_IDENTIFIER" "$CHBOOT_USRDIR" ; then
+		if entry_validate "$ENTRY_IDENTIFIER" "$CHBOOT_USRDIR/$ENTRY_IDENTIFIER" ; then
 			chboot_copy_entry_src $ENTRY_IDENTIFIER
 			GRUB_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_IDENTIFIER/boot"
 			mkdir -p "$GRUB_DIR"
@@ -264,12 +277,16 @@ chboot_update_entries(){
 
 # @description: copy entry files to chboot partition
 # @param $1: entry identifier
+# @param $2: Custom folder to copy entries (optional)
 # @return: 0
 chboot_copy_entry_src(){
 	ENTRY_ID="$1"
 	ORIGIN_FOLDER="$CHBOOT_USRDIR/$ENTRY_ID"
+	shift
+	[ -z "$1" ] || ORIGIN_FOLDER="$1"
 	chboot_del_entry "$ENTRY_ID"
-	[ ! -d "$ORIGIN_FOLDER" ] || cp -r "$ORIGIN_FOLDER"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+	mkdir  -p "$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_ID"
+	[ ! -d "$ORIGIN_FOLDER" ] || cp -r "$ORIGIN_FOLDER/."  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_ID"
 }
 
 
@@ -400,14 +417,14 @@ entry_run_hook(){
 # @param $1: Entry identifier
 # @param $2: Custom folder for check entries (optional)
 # @return: 0 exit ; 1 fail
-# @example: entry_validate llx25 /usr/share/lliurex-chboot/srcs
+# @example: entry_validate llx25 /usr/share/lliurex-chboot/srcs/llx25
 entry_validate(){
 	RAW_NAME="$1"
 	[ "$RAW_NAME" ] || return 1
 	RAW_DIR="$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
-	shift
-	[ -z "$1" ] || 	RAW_DIR="$1"
 	ENTRY_DIR="$RAW_DIR/$RAW_NAME"
+	shift
+	[ -z "$1" ] || 	ENTRY_DIR="$1"
 	[ -d "$ENTRY_DIR" ] || return 1
 	for f in $CHBOOT_ENTRY_FILES ; do
 		[ -r "$ENTRY_DIR/$f" ] || return 1
