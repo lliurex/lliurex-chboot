@@ -62,6 +62,7 @@ usage(){
 	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
 	    "       $(basename "$0") show CHBOOT_ENTRY" \
 	    "       $(basename "$0") install CHBOOT_ENTRY [INSTALL OPTIONAL PARAMETERS ...]" \
+	    "       $(basename "$0") mkentry CHBOOT_ENTRY TEMPLATE_PATH" \
 	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]"\
 	    "       $(basename "$0") enable-boot CHBOOT_ENTRY "\
 	    "       $(basename "$0") disable-boot CHBOOT_ENTRY "
@@ -92,6 +93,16 @@ main(){
 			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
 			chboot_install $RAW_NAME "$@"
+			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
+			;;
+		mkentry)
+			[ "$1" ] || usage
+			RAW_NAME="$1"
+			shift
+			[ "$1" ] || usage
+			SRC_PATH="$2"
+			ALREADY_MOUNTED="$(chboot_mount)"
+			chboot_copy_entry_src "$RAW_NAME" "$SRC_PATH"
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		list)
@@ -165,18 +176,6 @@ chboot_test_partition(){
 	return 0
 }
 
-# @description: copy needed files from /usr/share/lliurex-chboot/srcs or custom origin
-# @param $1:	entry identifier
-# @side-effects: Copy 
-# @return: 0 exit; 1 fail
-chboot_copy_entry(){
-	RAW_NAME="$1"
-	SRC_DIR="CHBOOT_USRDIR/$RAW_NAME"
-	shift
-	[ -z "$1" ] || SRC_DIR="$1"
-	entry_validate $RAW_NAME "$SRC_DIR" || return 1
-	chboot_copy_entry_src $RAW_NAME
-}
 
 # @description: copy needed files from /usr/share/lliurex-chboot/srcs to chboot partition and run configure hook
 # @param $1:	entry identifier
