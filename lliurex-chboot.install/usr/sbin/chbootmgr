@@ -91,7 +91,7 @@ main(){
 			RAW_NAME="$1"
 			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
-			chboot_install $RAW_NAME $@
+			chboot_install $RAW_NAME "$@"
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		list)
@@ -386,7 +386,7 @@ entry_run_hook(){
 		chboot_update_vars "$ENTRY_NAME"
 		export CHBOOT_LABEL CHBOOT_MOUNT CHBOOT_BASEDIR CHBOOT_FS CHBOOT_TAG CHBOOT_UUID CHBOOT_PART CHBOOT_USRDIR CHBOOT_ISODIR CHBOOT_IMGDIR CHBOOT_BOOTDIR CHBOOT_SRCDIR CHBOOT_SRCNAME 
 		rc=0
-		$SCRIPT $@|| rc=$?
+		$SCRIPT "$@" || rc=$?
 		return $rc
 	else
 		rc=1
