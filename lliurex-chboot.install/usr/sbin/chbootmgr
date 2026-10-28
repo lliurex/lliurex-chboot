@@ -269,7 +269,7 @@ chboot_copy_entry_src(){
 	ENTRY_ID="$1"
 	ORIGIN_FOLDER="$CHBOOT_USRDIR/$ENTRY_ID"
 	chboot_del_entry "$ENTRY_ID"
-	cp -r "$ORIGIN_FOLDER"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
+	[ ! -d "$ORIGIN_FOLDER" ] || cp -r "$ORIGIN_FOLDER"  "$CHBOOT_MOUNT/$CHBOOT_SRCDIR"
 }
 
 
