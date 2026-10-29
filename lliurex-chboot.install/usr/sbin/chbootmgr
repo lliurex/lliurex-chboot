@@ -36,6 +36,8 @@ CHBOOT_SRCNAME=""
 CHBOOT_GRUB_FILE="$CHBOOT_BOOTDIR/chboot.cfg"
 CHBOOT_DIRS="$CHBOOT_ISODIR $CHBOOT_IMGDIR $CHBOOT_BOOTDIR $CHBOOT_SRCDIR"
 
+CHBOOT_NOENTRY_LIST="configure|unconfigure|mount|umount|list"
+
 #############
 # functions #
 #############
@@ -59,10 +61,10 @@ die(){
 }
 
 usage(){
-	die "Usage" "$(basename "$0") {configure|unconfigure|mount|umount|list}" \
+	die "Usage" "$(basename "$0") {$CHBOOT_NOENTRY_LIST}" \
 	    "       $(basename "$0") show CHBOOT_ENTRY" \
 	    "       $(basename "$0") install CHBOOT_ENTRY [INSTALL OPTIONAL PARAMETERS ...]" \
-	    "       $(basename "$0") mkentry CHBOOT_ENTRY TEMPLATE_PATH" \
+	    "       $(basename "$0") create CHBOOT_ENTRY SOURCE_PATH" \
 	    "       $(basename "$0") prepare CHBOOT_ENTRY [PREPARE OPTIONAL PARAMETERS ...]"\
 	    "       $(basename "$0") enable-boot CHBOOT_ENTRY "\
 	    "       $(basename "$0") disable-boot CHBOOT_ENTRY "
@@ -72,6 +74,11 @@ main(){
 	[ "$1" ] || usage
 	ACTION="$1"
 	shift
+	if ! echo "|${CHBOOT_NOENTRY_LIST}|" |grep -q "|${ACTION}|" ; then
+		[ "$1" ] || usage
+		RAW_NAME="$1"
+		shift
+	fi
 	case "$ACTION" in
 		configure)
 			if ! chboot_configure ; then
@@ -89,18 +96,13 @@ main(){
 			chboot_umount
 			;;
 		install)
-			RAW_NAME="$1"
-			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
 			chboot_install $RAW_NAME "$@"
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
-		mkentry)
+		create)
 			[ "$1" ] || usage
-			RAW_NAME="$1"
-			shift
-			[ "$1" ] || usage
-			SRC_PATH="$2"
+			SRC_PATH="$1"
 			ALREADY_MOUNTED="$(chboot_mount)"
 			chboot_copy_entry_src "$RAW_NAME" "$SRC_PATH"
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
@@ -117,7 +119,6 @@ main(){
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		show)
-			RAW_NAME="$1"
 			ALREADY_MOUNTED="$(chboot_mount)"
 			if entry_validate "$RAW_NAME" ; then
 				entry_show_status "$RAW_NAME"
@@ -129,8 +130,6 @@ main(){
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		prepare)
-			RAW_NAME="$1"
-			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
 			if entry_validate "$RAW_NAME" ; then
 				entry_prepare "$RAW_NAME" "$@"
@@ -140,8 +139,6 @@ main(){
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		enable-boot)
-			RAW_NAME="$1"
-			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
 			if entry_validate "$RAW_NAME" ; then
 				entry_activate "$RAW_NAME"
@@ -153,8 +150,6 @@ main(){
 			[ "$ALREADY_MOUNTED" = "Y" ] || chboot_umount || true
 			;;
 		disable-boot)
-			RAW_NAME="$1"
-			shift
 			ALREADY_MOUNTED="$(chboot_mount)"
 			if entry_validate "$RAW_NAME" ; then
 				entry_deactivate "$RAW_NAME"
@@ -177,15 +172,27 @@ chboot_test_partition(){
 }
 
 
-# @description: copy needed files from /usr/share/lliurex-chboot/srcs to chboot partition and run configure hook
+# @description: create entry and copy files from arbitrary path to chboot partition
+# @param $1:	entry identifier
+# @param $2:    Custom folder to copy entries (full path)
+# @side-effects: Copy 
+# @return: 0 exit; 1 fail
+chboot_create_src(){
+	RAW_NAME="$1"
+	ORIGIN_FOLDER="$2"
+	entry_validate "$RAW_NAME" "$ORIGIN_FOLDER" || return 1
+	chboot_copy_entry_src "$RAW_NAME" "$ORIGIN_FOLDER"
+
+}
+
+# @description: use chboot_create_src to copy needed files from /usr/share/lliurex-chboot/srcs to chboot partition
+#               and run configure hook
 # @param $1:	entry identifier
 # @side-effects: Copy 
 # @return: 0 exit; 1 fail
 chboot_install(){
 	RAW_NAME="$1"
-	shift
-	entry_validate $RAW_NAME "$CHBOOT_USRDIR/$RAW_NAME" || return 1
-	chboot_copy_entry_src $RAW_NAME
+	chboot_create_src "$RAW_NAME" "$CHBOOT_USRDIR/$RAW_NAME" || return 1
 	entry_run_hook $RAW_NAME install "$@"
 
 }
