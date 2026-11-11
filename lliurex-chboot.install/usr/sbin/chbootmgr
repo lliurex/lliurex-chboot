@@ -90,7 +90,7 @@ main(){
 			chboot_unconfigure
 			;;
 		mount)
-			chboot_mount -q
+			chboot_mount "$@"
 			;;
 		umount)
 			chboot_umount
@@ -347,7 +347,8 @@ chboot_get_part(){
 }
 
 chboot_test_mount(){
-	if df --output=target,source $CHBOOT_MOUNT |grep -q "^$CHBOOT_MOUNT" ; then
+	# simplify options in df command to be able to use it in iniramfs environment
+	if df |grep -q "^\s${CHBOOT_MOUNT}$" ; then
 		return 0
 	fi
 	return 1
