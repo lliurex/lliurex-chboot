@@ -4,29 +4,29 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <UserObject label="&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;LliureX chboot BOOT PROCESS&lt;/span&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="cdEf1zgu6GCOJ6c-2kMY-17">
+        <UserObject label="&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;LliureX chboot GRUB BOOT PROCESS&lt;/span&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="cdEf1zgu6GCOJ6c-2kMY-17">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontColor=#df1111;fontSize=18;" vertex="1">
-            <mxGeometry height="30" width="290" x="80" y="70" as="geometry" />
+            <mxGeometry height="30" width="374.37" x="25" y="70" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="vg8AIM2gMWxkjM6hYhQN-28" parent="1" style="rounded=1;whiteSpace=wrap;html=1;textShadow=0;labelBorderColor=default;spacingRight=0;labelBackgroundColor=none;spacingBottom=0;shadow=1;" value="" vertex="1">
-          <mxGeometry height="190" width="260" x="80" y="110" as="geometry" />
+          <mxGeometry height="190" width="326.74" x="20" y="110" as="geometry" />
         </mxCell>
         <UserObject label="&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;font&gt;&lt;b&gt;CHBOOT&amp;nbsp;partition&lt;/b&gt;&amp;nbsp;&lt;/font&gt;&lt;/span&gt;" placeholders="1" name="Variable" id="vg8AIM2gMWxkjM6hYhQN-29">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;" vertex="1">
-            <mxGeometry height="25" width="210" x="130" y="119.23" as="geometry" />
+            <mxGeometry height="25" width="210" x="72" y="119.23" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="MAIN CHBOOT grub.cfg file:&lt;br&gt;(chboot)/lliurex-chboot/boot" placeholders="1" name="Variable" id="vg8AIM2gMWxkjM6hYhQN-31">
+        <UserObject label="MAIN CHBOOT grub.cfg file:&lt;br&gt;(chboot)/lliurex-chboot/boot/grub/grub.cfg" placeholders="1" name="Variable" id="vg8AIM2gMWxkjM6hYhQN-31">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="25" width="200" x="130" y="150.23" as="geometry" />
+            <mxGeometry height="30" width="260" x="77" y="150.23" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="koy4InZBCoRZQNwUk4Db-2" parent="1" style="shadow=0;dashed=0;html=1;strokeColor=#b85450;fillColor=#f8cecc;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.2d.hard_drive;gradientColor=#ea6b66;" value="" vertex="1">
-          <mxGeometry height="40.77" width="26.666666666666664" x="98.93000000000006" y="116.6" as="geometry" />
+          <mxGeometry height="40.77" width="26.666666666666664" x="38.930000000000064" y="116.6" as="geometry" />
         </mxCell>
         <mxCell id="XsYAVEZNy_Y8RFNWvB8f-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;textShadow=0;labelBorderColor=default;spacingRight=0;labelBackgroundColor=none;spacingBottom=0;shadow=1;" value="" vertex="1">
-          <mxGeometry height="94.01" width="260" x="450" y="110.99" as="geometry" />
+          <mxGeometry height="94.01" width="190" x="460" y="110.99" as="geometry" />
         </mxCell>
         <UserObject label="&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;font&gt;&lt;b&gt;ROOT (LliureX) partition&lt;/b&gt;&amp;nbsp;&lt;/font&gt;&lt;/span&gt;" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-6">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;" vertex="1">
@@ -35,26 +35,26 @@
         </UserObject>
         <UserObject label="LliureX grub.cfg file:&lt;br&gt;/boot/grub/grub.cfg" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-7">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="30" width="200" x="500" y="151.22" as="geometry" />
+            <mxGeometry height="30" width="140" x="500" y="151.22" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="XsYAVEZNy_Y8RFNWvB8f-8" parent="1" style="shadow=0;dashed=0;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.2d.hard_drive;gradientColor=#7ea6e0;" value="" vertex="1">
-          <mxGeometry height="40.77" width="26.666666666666664" x="468.93000000000006" y="117.58999999999999" as="geometry" />
+          <mxGeometry height="40.77" width="26.666666666666664" x="466.93000000000006" y="117.58999999999999" as="geometry" />
         </mxCell>
         <mxCell id="vg8AIM2gMWxkjM6hYhQN-47" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;strokeWidth=3;" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="307.20000000000005" y="170.34000000000003" as="sourcePoint" />
-            <mxPoint x="488.6" y="170" as="targetPoint" />
+            <mxPoint x="340.00000000000006" y="170.34000000000003" as="sourcePoint" />
+            <mxPoint x="490" y="170" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <UserObject label="check and load&lt;br&gt;using configfile" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-9">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="40.77" width="105.26" x="342" y="164.23" as="geometry" />
+            <mxGeometry height="40.77" width="105.26" x="352" y="165.23" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="ACTIVE CHBOOT custom config.:&lt;br&gt;{ENTRY_PATH}/boot/grub.cfg&lt;div&gt;&lt;br&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-11">
+        <UserObject label="ACTIVE CHBOOT custom config.:&lt;br&gt;(chboot)/lliurex-chboot/srcs/{ENTRY}/boot/grub.cfg&lt;div&gt;&lt;br&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-11">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="30" width="200" x="130" y="202" as="geometry" />
+            <mxGeometry height="30" width="310" x="27" y="202" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="XsYAVEZNy_Y8RFNWvB8f-12" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;defaultLabelBackgroundColor=page;labelPadding=0 4;strokeWidth=3;fillColor=#cce5ff;strokeColor=#7EA6E0;" value="">
@@ -63,7 +63,7 @@
             <mxPoint x="560" y="181.22" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="XsYAVEZNy_Y8RFNWvB8f-13" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#7EA6E0;strokeWidth=3;" value="">
+        <mxCell id="XsYAVEZNy_Y8RFNWvB8f-13" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#7EA6E0;strokeWidth=3;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="XsYAVEZNy_Y8RFNWvB8f-11" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
             <mxPoint x="560" y="220.34" as="sourcePoint" />
             <mxPoint x="307.2" y="220.34000000000003" as="targetPoint" />
@@ -71,18 +71,18 @@
         </mxCell>
         <UserObject label="include" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-15">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="25" width="105.26" x="344.74" y="220" as="geometry" />
+            <mxGeometry height="25" width="105.26" x="346.74" y="220" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="XsYAVEZNy_Y8RFNWvB8f-17" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;strokeWidth=3;" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="209.5" y="233.00000000000003" as="sourcePoint" />
-            <mxPoint x="209.5" y="262.65999999999997" as="targetPoint" />
+            <mxPoint x="171.5" y="231.00000000000003" as="sourcePoint" />
+            <mxPoint x="171.5" y="260.65999999999997" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <UserObject label="load custom&lt;br&gt;vmlinuz and initrd files" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-18">
+        <UserObject label="start custom&lt;br&gt;vmlinuz and initrd files" placeholders="1" name="Variable" id="XsYAVEZNy_Y8RFNWvB8f-18">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="30" width="200" x="114" y="262" as="geometry" />
+            <mxGeometry height="30" width="180" x="84" y="256" as="geometry" />
           </mxCell>
         </UserObject>
       </root>
