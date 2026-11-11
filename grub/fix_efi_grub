@@ -1,17 +1,18 @@
 #!/bin/bash
 
-BOOT_DIRECTORY="/chboot/lliurex-chboot/boot/"
-ROOT_UUID="$(findmnt -no UUID /)"
- 
-if [ ! -d $BOOT_DIRECTORY ]; then
-	exit 0
+# provide ROOT_UUID parameter to avoid using findmnt
+# (this is a workaround for chboot-partroller ...)
+if echo "x${1}" |grep -q "^x--ROOT_UUID=" ; then
+	ROOT_UUID="${1#*=}"
 fi
+[ "$ROOT_UUID" ] || ROOT_UUID="$(findmnt -no UUID /)"
 
-
-grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi 
-update-grub
-
-cat <<EOF> /chboot/lliurex-chboot/boot/grub/grub.cfg
+BOOT_DIRECTORY="/chboot/lliurex-chboot/boot/"
+ALREADY_MOUNTED="$(chbootmgr mount)"
+ 
+if [ -d "$BOOT_DIRECTORY" ]; then
+	# TODO: make some additional chboot checks ...
+	cat <<EOF> /chboot/lliurex-chboot/boot/grub/grub.cfg
 
 search.fs_uuid $ROOT_UUID root
 search.fs_label chboot chboot
@@ -25,3 +26,14 @@ else
 fi
 
 EOF
+
+else
+	# revert to standard boot dir
+	BOOT_DIRECTORY="/boot/"
+fi
+
+grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi 
+update-grub
+
+[ "$ALREADY_MOUNTED="Y" ] || chbootmgr umount
+
