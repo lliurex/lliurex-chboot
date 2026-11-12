@@ -46,11 +46,17 @@ The included configurations, allow different boot modes:
 - run interactive LliureX installation image
 
 ## Boot procedure details
-To configure alternative boot options, LliureX chboot uses multiple ***grub*** configuration files.
+
+To configure alternative boot options, LliureX chboot uses multiple ***grub*** configuration files, so the installation of chboot package modifies the default grub boot sequence.
+The main change is that chboot uses grub-install and configures '(chboot)/lliurex-chboot/boot/' as 'boot-directory', so, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file:
 
 image::chboot-boot.svg[]
 
-When a new boot entry is created, chboot generates:
+### Detailed boot sequence
+
+- grub runs '(chboot)/lliurex-chboot/boot/grub/grub.cfg' file. This 
+
+The installation of chboot package modifies the grub boot sequence whWhen a new boot entry is created, chboot generates:
 
 - A ***UEFI boot entry***.
 
