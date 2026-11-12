@@ -48,13 +48,19 @@ The included configurations, allow different boot modes:
 ## Boot procedure details
 
 To configure alternative boot options, LliureX chboot uses multiple ***grub*** configuration files, so the installation of chboot package modifies the default grub boot sequence.
-The main change is that chboot uses grub-install and configures '(chboot)/lliurex-chboot/boot/' as 'boot-directory', so, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file:
+The main change is that chboot uses grub-install and configures '(chboot)/lliurex-chboot/boot/' as 'boot-directory', so, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file.
+
+The code in this grub file determines whether to load the '/boot/grub/grub.cfg' from LliureX root partition or start the chboot tasks included in file '(chboot)/lliurex-chboot/boot/boot.cfg'.
 
 image::chboot-boot.svg[]
 
 ### Detailed boot sequence
 
-- grub runs '(chboot)/lliurex-chboot/boot/grub/grub.cfg' file. This 
+When a chboot boot entry is configured and activated (using command 'chbootmgr prepare ...') , a custom grub configuration for that entry is saved as 'grub.cfg' under 'boot' directory in the correspondig entry folder (see section 'chboot directory structure' below). The file '(chboot)/lliurex-chboot/boot/boot.cfg' is also updated to include the specific grub configuration of the active entry.
+
+The boot process performs the following steps:
+
+1. grub runs '(chboot)/lliurex-chboot/boot/grub/grub.cfg' file. This grub script checks the existence of file '/boot/grub/grub.cfg'  LliureX uses a previously stored UUID to check existence of LliureX root partition 
 
 The installation of chboot package modifies the grub boot sequence whWhen a new boot entry is created, chboot generates:
 
