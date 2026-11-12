@@ -1,10 +1,23 @@
 #!/bin/bash
 
-# provide ROOT_UUID parameter to avoid using findmnt
-# (this is a workaround for chboot-partroller ...)
-if echo "x${1}" |grep -q "^x--ROOT_UUID=" ; then
-	ROOT_UUID="${1#*=}"
-fi
+# workaround for chboot-partroller ...
+while echo "x${1}" |grep -q "^x--.*=" ; do
+	PARAM="${1#--}"
+	PARAM_NAME="${PARAM%%=*}"
+	PARAM_DATA="${PARAM#*=}"
+	case "${PARAM_NAME}" in
+		ROOT_UUID|ROOT-UUID)
+			# provide ROOT_UUID parameter to avoid using findmnt
+			ROOT_UUID="${PARAM_DATA}"
+			;;
+		GRUB_DEVICE|GRUB-DEVICE)
+			# specify device for grub installation and avoid default detection
+			GRUB_DEVICE="${PARAM_DATA}"
+			;;
+	esac
+	shift
+done
+
 [ "$ROOT_UUID" ] || ROOT_UUID="$(findmnt -no UUID /)"
 
 BOOT_DIRECTORY="/chboot/lliurex-chboot/boot/"
@@ -32,7 +45,7 @@ else
 	BOOT_DIRECTORY="/boot/"
 fi
 
-grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi 
+grub-install --boot-directory=$BOOT_DIRECTORY --efi-directory=/boot/efi $GRUB_DEVICE
 update-grub
 
 [ "$ALREADY_MOUNTED="Y" ] || chbootmgr umount
