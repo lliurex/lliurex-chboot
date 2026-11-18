@@ -51,33 +51,25 @@ To configure alternative boot options, LliureX chboot uses multiple ***grub*** c
 
 > **chboot perfoms a custom installation of grub in the target machine.** This custom install changes 'boot-directory' settings, and grub will search for files in '(chboot)/lliurex-chboot/boot/' directory (not in the default '(root)/boot'. With this change, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file.
 
-The code in this grub file determines whether to load the '/boot/grub/grub.cfg' from LliureX root partition or start the chboot tasks included in file '(chboot)/lliurex-chboot/boot/boot.cfg'.
+This mechanism acts a 'lifeguard' in case the recovery process is interrumped, preventing the system from becoming 'bricked'. By default, the code in '(chboot)/lliurex-chboot/boot/grub/grub.cfg' attempts to load '(root)/boot/grub/grub.cfg' from LliureX root partition when available, but if this file  is unavalible,  starts the chboot tasks included in file '(chboot)/lliurex-chboot/boot/boot.cfg' to resume the interrupted work.
 
 image::chboot-boot.svg[]
 
 ### Detailed boot sequence
 
-When a chboot boot entry is configured and activated (using command 'chbootmgr prepare ...') , a custom grub configuration for that entry is saved as 'grub.cfg' under 'boot' directory in the correspondig entry folder (see section 'chboot directory structure' below). The file '(chboot)/lliurex-chboot/boot/boot.cfg' is also updated to include this specific grub configuration of the active entry.
+When a chboot boot entry is configured and activated (using command 'chbootmgr prepare ...'), the  following actions are performed:
+
+- A custom grub configuration file for that entry is generated and saved as 'grub.cfg' under 'boot' directory in the correspondig entry folder ( '(chboot)/lliurex-chboot/srcs/{ENTRY}/boot/grub.cfg',
+see section 'chboot directory structure' below).
+- The file '(chboot)/lliurex-chboot/boot/boot.cfg' is updated to include this specific grub configuration of the active entry.
+- The grub configuration file in the root partition '(root)/boot/grub/grub.cfg' is also updated to show a new entry to run this file. This entry is configured as default grub entry.
 
 The boot process performs the following steps:
 
-1. grub runs '(chboot)/lliurex-chboot/boot/grub/grub.cfg' file. This grub script checks the existence of file '/boot/grub/grub.cfg'  LliureX uses a previously stored UUID to check existence of LliureX root partition 
-
-The installation of chboot package modifies the grub boot sequence whWhen a new boot entry is created, chboot generates:
-
-- A ***UEFI boot entry***.
-
-> This entry is availabe for UEFI Boot Manager, but chboot ***does not include it in the boot order*** but sets the `UEFI BootNext` `NVRAM` variable, and (optionally) triggers a system reboot.
-
-- The associated ***directory folder in the EFI System Partition*** to launch grub
-
-> When creating this directory, chboot scans current EFI partition and search for `EFI/lliurex-25/`, `EFI/lliurex-23/` or `EFI/ubuntu/` folders (in that order) and uses the first match as a template to copy files for the new entry. The `grub.cfg` file is rewritten to provide an appropiated grub prefix configuration for the new boot entry.
-
-- A ***grub boot directory in the chboot partition*** with the required boot files and grub configuration
-
-LliureX chboot uses exactly the same name for the EFI folder and the UEFI boot entry. This names are prefixed with `chboot_`. At this moment, chboot manages only one boot entry with a fixed name (`chboot_lliurex`) regardless of the specific image name to boot. This strategy prevents the proliferation of unnecessary entries in the UEFI Boot Manager.
-However, in the chboot partition, no prefix is used for the names of the directories of the different entries, and each one has its own “boot” directory within its subdirectory.
-The UEFI boot entry loads `shimx64.efi` file to provide compatibility with Secure Boot configurations.
+1. grub runs '(chboot)/lliurex-chboot/boot/grub/grub.cfg' file. It uses a previously stored UUID to check existence of main LliureX root partition, and looks for file 
+This grub script checks the existence of file '/boot/grub/grub.cfg' LliureX uses a previously stored UUID to check existence of LliureX root partition.
+2. If root partition is available and file '(root)/boot/grub/grub.cfg' exists, grub loads this file to show tne main LliureX grub menu. If a chboot entry has been activated, this becomes the deifault grub entry, so, an unattended system will end up running the configured chboot actions.
+3. If root partition if not available or '(root)/boot/grub/grub.cfg' is not readable, grub defaults to the specific configuration of the active chboot entry ('(chboot)/lliurex-chboot/srcs/{ENTRY}/boot/grub.cfg').
 
 ## The chboot disk partition
 LliureX chboot requires a dedicated disk partition. Partition size should be set according to the disk images or iso files you wish to use. The default size when running lliureX installer in OEM mode is 12 GB, enough to accommodate an ISO image of Clonezilla and the LliureX installer at the same time.
