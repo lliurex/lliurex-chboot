@@ -49,7 +49,7 @@ The included configurations, allow different boot modes:
 
 To configure alternative boot options, LliureX chboot uses multiple ***grub*** configuration files, so the installation of chboot package modifies the default grub boot sequence.
 
-> **chboot perfoms a custom installation of grub in the target machine.** This custom install changes 'boot-directory' settings, so grub will search for files in '(chboot)/lliurex-chboot/boot/' directory (not in the default '(root)/boot', so, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file.
+> **chboot perfoms a custom installation of grub in the target machine.** This custom install changes 'boot-directory' settings, and grub will search for files in '(chboot)/lliurex-chboot/boot/' directory (not in the default '(root)/boot'. With this change, when booting, grub uses '(chboot)/lliurex-chboot/boot/grub/grub.cfg' as main configuration file.
 
 The code in this grub file determines whether to load the '/boot/grub/grub.cfg' from LliureX root partition or start the chboot tasks included in file '(chboot)/lliurex-chboot/boot/boot.cfg'.
 
