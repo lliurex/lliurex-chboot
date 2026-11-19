@@ -110,7 +110,7 @@ This is an example of the chboot entries tree:
 └── lliurex-chboot
     └── srcs
         ├── ENTRY_FOLDER1
-        │   ├── chboot.cfg
+        │   ├── chboot.info
         │   ├── boot
         │   └── hooks
         │       ├── install
@@ -129,7 +129,7 @@ image::chboot-entry-life-cyle.svg[]
 
 ### Mandatory files and folders for each source configuration ###
 
-- `chboot.cfg` (file): This includes description and other information about the entry. The structure and syntax of the file is similar to `debian/control` files.
+- `chboot.info` (file): This includes description and other information about the entry. The structure and syntax of the file is similar to `debian/control` files.
 - `boot` (dir): This directory must include all the necessary files to boot the entry, like the /boot/grub folder of an standard linux system (eg. vmlinuz, initrd, squashfs files, configurations ...). When the chboot entry is activated, chboot creates a grub configuration in the EFI partition that expects a `grub.cfg` file in this folder.
 - `hooks` (dir): The hooks folder must include the following executables:
   - `install`: The script is a "oneshot" script, and is called only once, just to copy/install the entry to the chboot partition the first time. It receives the full path of boot directory as first argument (`/$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/boot`). The exit status of the script is silenty ignored.
