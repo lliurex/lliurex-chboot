@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0">
   <diagram name="Page-1" id="55a83fd1-7818-8e21-69c5-c3457e3827bb">
-    <mxGraphModel dx="1362" dy="752" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
+    <mxGraphModel dx="978" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -88,9 +88,9 @@
         <mxCell id="Wc237GI1fGvbEEKr4F5d-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;shapeInside=1;" value="&lt;font face=&quot;Courier New&quot; style=&quot;font-size: 10px;&quot;&gt;check&lt;/font&gt;" vertex="1">
           <mxGeometry height="40.77" width="80" x="130" y="184.62" as="geometry" />
         </mxCell>
-        <UserObject label="SAFE CHBOOT config.:&lt;br&gt;(chboot)/lliurex-chboot/boot/boot.cfg&lt;div&gt;&lt;br&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="Wc237GI1fGvbEEKr4F5d-3">
+        <UserObject label="SAFE CHBOOT config.:&lt;br&gt;(chboot)/lliurex-chboot/boot/chboot.cfg&lt;div&gt;&lt;br&gt;&lt;/div&gt;" placeholders="1" name="Variable" id="Wc237GI1fGvbEEKr4F5d-3">
           <mxCell parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=10;" vertex="1">
-            <mxGeometry height="30" width="231.63" x="105.37" y="260" as="geometry" />
+            <mxGeometry height="30" width="237" x="100" y="260" as="geometry" />
           </mxCell>
         </UserObject>
         <mxCell id="Wc237GI1fGvbEEKr4F5d-4" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;strokeWidth=3;" value="">
