@@ -21,7 +21,7 @@ CHBOOT_TAG="/etc/lliurex-auto-upgrade/tags/chboot"
 CHBOOT_UUID=""
 CHBOOT_PART=""
 
-CHBOOT_ENTRY_FILES="chboot.cfg"
+CHBOOT_ENTRY_FILES="chboot.info"
 CHBOOT_ENTRY_DIRS="boot hooks"
 CHBOOT_ENTRY_HOOKS="install uninstall check prepare free_up mk_grub"
 
@@ -383,7 +383,7 @@ entry_show_field(){
 	ALREADY_MOUNTED="$(chboot_mount)"
 	chboot_test_mount || return 1
 	#CHBOOT_PATH="$CHBOOT_MOUNT/$ENTRY_NAME"
-	CFG_FILE="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/chboot.cfg"
+	CFG_FILE="$CHBOOT_MOUNT/$CHBOOT_SRCDIR/$ENTRY_NAME/chboot.info"
 	echo "$FIELD_NAME:"
 	sed -ne "/^$FIELD_NAME:/,\${s%^$FIELD_NAME:\s*% %;/^[^[:blank:]]/,\$d;p}" "$CFG_FILE" |while read l; do
 		eval echo "\" $l\""
